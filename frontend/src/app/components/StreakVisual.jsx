@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import '../globals.css';
 
 const StreakVisual = ({ streak }) => {
   // Create an array of unique keys for the dots

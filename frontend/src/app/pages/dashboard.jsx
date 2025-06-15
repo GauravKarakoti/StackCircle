@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useCitrea } from '../contexts/CitreaContext';
 import Dashboard from '../components/Dashboard';
+import '../globals.css';
 
 export default function DashboardPage() {
   const { account } = useCitrea();

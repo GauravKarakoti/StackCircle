@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCitrea } from '../contexts/CitreaContext';
+import '../globals.css';
 
 const CircleWizard = () => {
   const { account, createCircle } = useCitrea();

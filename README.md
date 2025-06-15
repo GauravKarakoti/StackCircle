@@ -10,7 +10,7 @@ Social savings dApp where communities pool BTC toward shared goals with:
 - 🌱 Built on Citrea (Bitcoin's first zk-rollup)
 
 ## Live Demo
-https://stackcircle.vercel.app  
+https://stack-circle.vercel.app  
 Testnet Wallet: `0xA292c308Bf0054c0c8b85bA5872499533343483a` (Request BTC via [faucet](https://citrea.xyz/faucet))
 
 ## Features

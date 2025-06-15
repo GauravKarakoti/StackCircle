@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo } 
 import { ethers } from 'ethers';
 import PropTypes from 'prop-types';
 import toast from 'react-hot-toast';
+import '../globals.css';
 
 const CitreaContext = createContext();
 

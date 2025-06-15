@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCitrea } from '../contexts/CitreaContext';
 import StreakVisual from './StreakVisual';
 import * as d3 from 'd3';
+import '../globals.css';
 
 const Dashboard = () => {
   const { account } = useCitrea();

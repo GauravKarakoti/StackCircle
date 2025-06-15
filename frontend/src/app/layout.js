@@ -5,6 +5,7 @@ import Link from 'next/link';
 import PropTypes from 'prop-types';
 import { useState, useEffect } from 'react';
 import { useCitrea, CitreaProvider } from './contexts/CitreaContext';
+import './globals.css';
 
 export default function RootLayout({ children }) {
   return (

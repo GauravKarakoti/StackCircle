@@ -1,6 +1,4 @@
-// Mock implementation of ZK utilities for frontend
-// In a real implementation, this would use WebAssembly or Web Workers
-// to generate and verify ZK proofs
+import '../globals.css';
 
 // Generate a mock nullifier hash
 export const generateNullifier = (address) => {

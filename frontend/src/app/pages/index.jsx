@@ -1,5 +1,6 @@
 import { useCitrea } from '../contexts/CitreaContext';
 import CircleWizard from '../components/CircleWizard';
+import '../globals.css';
 
 export default function Home() {
   const { account, connectWallet } = useCitrea();
