@@ -1,0 +1,6 @@
+{
+  "network": "citrea-testnet",
+  "circleFactory": "0xB587b8A6ad2DD63544a8AF265e99b4fec5454019",
+  "btcOracle": "0x853C2a54088E4F42AfD2094798614297590b8d1f",
+  "semaphore": "0x5428DDb1b97F233880509bf29De9CF53e2379E7a"
+}
