@@ -15,7 +15,7 @@ export default function Home() {
           </h1>
           <p className="text-xl text-gray-600">
             Create social savings circles with friends, families, or communities.<br />
-            Achieve your financial goals on Bitcoin's first ZK Rollup.
+            Achieve your financial goals on Bitcoin&apos;s first ZK Rollup.
           </p>
         </div>
 

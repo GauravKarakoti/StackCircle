@@ -42,7 +42,7 @@ export default function RootLayout({ children }) {
               {/* Footer */}
               <footer className="bg-orange-50 py-8 text-center text-gray-600 border-t border-orange-100 mt-8">
                 <div className="max-w-6xl mx-auto px-4">
-                  <p className="mb-3 font-semibold text-orange-600">Built on Citrea — Bitcoin's First ZK Rollup</p>
+                  <p className="mb-3 font-semibold text-orange-600">Built on Citrea — Bitcoin&apos;s First ZK Rollup</p>
                   <div className="flex justify-center space-x-8 mb-4">
                     <a href="https://docs.citrea.xyz" target="_blank" rel="noopener noreferrer" className="hover:text-orange-700 hover:underline flex items-center space-x-1">
                       <span>📄</span><span>Documentation</span>
