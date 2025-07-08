@@ -9,7 +9,7 @@ StackCircle enables communities to pool BTC toward shared financial goals using 
 - 🛡️ **Non-custodial management** through multi-sig wallets
 - 🌱 **On-chain governance** for fund distribution decisions
 
-![Key Components](key-components.png)
+![Key Components](images/Key-Components.png)
 
 ## Live Demo 🔍
 - Access the testnet deployment: https://stack-circle.vercel.app  
@@ -23,7 +23,7 @@ StackCircle enables communities to pool BTC toward shared financial goals using 
 - Configure member approval requirements
 
 ### Contribution System
-![Contribution System](Contribution-System.png)
+![Contribution System](images/Contribution-System.png)
 - Recurring automated contributions
 - Privacy-preserving balance verification
 - Streak tracking with decay mechanism
@@ -66,7 +66,7 @@ npm run dev
 
 ## Architecture Deep Dive 🧠
 ### Contract Structure
-![Contract Structure](Contract-Structure.png)
+![Contract Structure](images/Contract-Structure.png)
 
 ### Citrea Integration
 1. ContributionEngine.sol
