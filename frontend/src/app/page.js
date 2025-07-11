@@ -1,7 +1,7 @@
 "use client";
 
 import { useCitrea } from './contexts/CitreaContext';
-import CircleWizard from "./components/CircleWizard";
+import CircleWizard from './components/CircleWizard';
 import './globals.css';
 
 export default function Home() {

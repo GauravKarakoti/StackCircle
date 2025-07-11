@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./ContributionEngine.sol";
 import "./StreakTracker.sol";
+import "./BadgeSystem.sol";
 
 contract CircleFactory is ERC721 {
     uint256 public circleCount;
@@ -12,9 +13,12 @@ contract CircleFactory is ERC721 {
     struct Circle {
         address engine;
         address tracker;
+        address governance;
         uint256 goal;
         uint256 created;
     }
+
+    address public badgeSystem;
     
     mapping(uint256 => Circle) public circles;
     mapping(address => uint256) public circleIds;
@@ -29,6 +33,7 @@ contract CircleFactory is ERC721 {
 
     constructor(address _btcOracle) ERC721("StackCircle", "SCIR") {
         BTC_TIMESTAMP_ORACLE = _btcOracle;
+        badgeSystem = address(new BadgeSystem(address(this)));
     }
 
     function createCircle(
@@ -51,13 +56,20 @@ contract CircleFactory is ERC721 {
         // Create streak tracker
         StreakTracker tracker = new StreakTracker();
         
-        // Store circle data
+        CircleGovernance governance = new CircleGovernance(msg.sender);
+        
+        // Update circle struct
         circles[newCircleId] = Circle({
             engine: address(engine),
             tracker: address(tracker),
+            governance: address(governance),
             goal: goal,
             created: block.timestamp
         });
+        
+        // Additional setup
+        engine.setBadgeSystem(badgeSystem);
+        tracker.setBadgeSystem(badgeSystem);
         
         // Mint NFT to creator
         _safeMint(msg.sender, newCircleId);

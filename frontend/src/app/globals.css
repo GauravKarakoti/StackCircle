@@ -68,3 +68,25 @@ body {
   50% { opacity: 1; }
   100% { opacity: 0.7; }
 }
+
+@media (max-width: 768px) {
+  .mobile-flex-col {
+    flex-direction: column;
+  }
+  
+  .mobile-w-full {
+    width: 100%;
+  }
+  
+  .mobile-mt-4 {
+    margin-top: 1rem;
+  }
+  
+  .mobile-text-center {
+    text-align: center;
+  }
+  
+  .mobile-p-4 {
+    padding: 1rem;
+  }
+}

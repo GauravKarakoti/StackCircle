@@ -87,6 +87,10 @@ contract StreakTracker {
         if (streak.current > streak.longest) {
             streak.longest = streak.current;
         }
+
+        if (streak.current == 7) {
+            IBadgeSystem(badgeSystem).mintBadge(circleId, member, 1);
+        }
         
         streak.lastUpdate = block.timestamp;
         emit StreakUpdated(member, streak.current);
