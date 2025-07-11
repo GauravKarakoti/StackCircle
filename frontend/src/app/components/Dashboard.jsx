@@ -8,21 +8,53 @@ import * as d3 from 'd3';
 import '../globals.css';
 
 const Dashboard = () => {
-  const { account } = useCitrea();
   const [circles, setCircles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { contract } = useCitrea();
+  const { account, contract } = useCitrea();
   const [activeCircle, setActiveCircle] = useState(null);
   const [badges, setBadges] = useState([1, 3]);
 
   useEffect(() => {
-    if (!account) return;
+    if (!account || !contract) return;
     
     // Fetch user's circles from contract
     const fetchCircles = async () => {
       setLoading(true);
-      contract.getCirclesForMember(account)
-      setTimeout(() => {
+      try {
+        if (contract.getCirclesForMember) {
+          // Get circle IDs for the current account
+          const circleIds = await contract.getCirclesForMember(account);
+          
+          // Create mock circles based on the retrieved IDs
+          const mockCircles = circleIds.map((id, index) => {
+            const circleId = Number(id); // Convert BigNumber to number
+            
+            return {
+              id: circleId,
+              name: `Circle ${index + 1}`,
+              goal: (index + 1) * 0.5, // Dynamic goal based on index
+              saved: (index + 1) * 0.15, // Dynamic saved amount
+              members: 4 + index * 2, // Dynamic member count
+              streak: 3 + index, // Dynamic streak
+              proposals: circleId % 2 === 0 ? [] : [ // Alternate proposals
+                {
+                  id: 1,
+                  title: "Donate 10% to Charity",
+                  description: "Proposal to donate 10% of funds to Bitcoin developers",
+                  type: "DONATION",
+                  votesFor: 15,
+                  votesAgainst: 2,
+                  deadline: Date.now() + 86400000 // 1 day from now
+                }
+              ]
+            };
+          });
+          
+          setCircles(mockCircles);
+        }
+      } catch (error) {
+        console.error("Failed to fetch circles:", error);
+        // Fallback to mock data if contract call fails
         setCircles([
           {
             id: 1,
@@ -39,7 +71,7 @@ const Dashboard = () => {
                 type: "DONATION",
                 votesFor: 15,
                 votesAgainst: 2,
-                deadline: Date.now() + 86400000 // 1 day from now
+                deadline: Date.now() + 86400000
               }
             ]
           },
@@ -53,12 +85,13 @@ const Dashboard = () => {
             proposals: []
           }
         ]);
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
     
     fetchCircles();
-  }, [account]);
+  }, [account, contract]);
   
   // Render progress chart
   useEffect(() => {

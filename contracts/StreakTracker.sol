@@ -3,10 +3,13 @@ pragma solidity ^0.8.20;
 
 import "./interfaces/ISemaphore.sol";
 import "./ContributionEngine.sol";
+import "./interfaces/IBadgeSystem.sol";
 
 contract StreakTracker {
     ISemaphore public semaphore;
     address public engine;
+    IBadgeSystem public badgeSystem;
+    uint256 public circleId;
     
     struct Streak {
         uint256 current;
@@ -23,6 +26,16 @@ contract StreakTracker {
     constructor() {
         // Initialize with mainnet Semaphore address (testnet mock in deployment)
         semaphore = ISemaphore(0x0000000000000000000000000000000000000000);
+    }
+
+    function setBadgeSystem(address _badgeSystem) external {
+        require(address(badgeSystem) == address(0), "Already set");
+        badgeSystem = IBadgeSystem(_badgeSystem);
+    }
+
+    function setCircleId(uint256 _circleId) external {
+        require(circleId == 0, "Already set");
+        circleId = _circleId;
     }
     
     function setEngine(address _engine) external {
@@ -88,8 +101,8 @@ contract StreakTracker {
             streak.longest = streak.current;
         }
 
-        if (streak.current == 7) {
-            IBadgeSystem(badgeSystem).mintBadge(circleId, member, 1);
+        if (streak.current == 7 && address(badgeSystem) != address(0)) {
+            badgeSystem.mintBadge(circleId, member, 1); // Badge ID 1 for streak
         }
         
         streak.lastUpdate = block.timestamp;

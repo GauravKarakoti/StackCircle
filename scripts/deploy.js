@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const fs = require("fs");
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -17,11 +18,30 @@ async function main() {
     return contract;
   };
 
-  // Helper for transactions
-  const sendTxWithNonce = async (contract, method, ...args) => {
-    const tx = await contract[method](...args, { nonce: currentNonce++ });
-    await tx.wait();
-    return tx;
+  const sendTxWithNonce = async (contract, method, args = [], overrides = {}) => {
+    try {
+      // pull out your gasLimit / value / etc., then inject the nonce:
+      const opts = { ...overrides, nonce: currentNonce++ };
+
+      // spread the real args, then the merged opts
+      const tx = await contract[method]( ...args, opts );
+      await tx.wait();
+      console.log(`Tx: ${method}(${args.join(", ")})`, opts);
+      return tx;
+    } catch (error) {
+      console.error(`Error in ${method}:`, error);
+      // Attempt to decode revert reason
+      if (error.data) {
+        try {
+          const revertReason = error.data.toString();
+          console.error("Revert reason:", revertReason);
+        } catch (decodeError) {
+          console.error("Could not decode revert reason");
+        }
+      }
+      
+      throw error;
+    }
   };
 
   try {
@@ -31,49 +51,21 @@ async function main() {
     // 2. Deploy Mock BTC Timestamp Oracle
     const btcTimestampMock = await deployWithNonce("BtcTimestampMock");
     
-    // 3. Deploy StreakTracker
-    const streakTracker = await deployWithNonce("StreakTracker");
-    
-    // Update StreakTracker with Semaphore address
-    await sendTxWithNonce(streakTracker, "setSemaphore", semaphoreMock.target);
-    console.log("Set Semaphore address in StreakTracker");
-    
-    // 4. Deploy CircleFactory with proper arguments
+    // 3. Deploy CircleFactory with proper arguments
     const circleFactory = await deployWithNonce(
       "CircleFactory",
-      btcTimestampMock.target  // Only BTC oracle address needed
+      btcTimestampMock.target
     );
     
-    // 5. Create a test circle
-    const createCircleTx = await sendTxWithNonce(
-      circleFactory,
-      "createCircle",
-      "Family Savings", 
-      ethers.parseEther("1.0"),
-      ethers.parseEther("0.01"),
-      604800 // 7 days in seconds
-    );
+    // 4. Get BadgeSystem address from factory
+    // const badgeSystemAddress = await circleFactory.badgeSystem();
+    // console.log("BadgeSystem deployed to:", badgeSystemAddress);
     
-    const receipt = await createCircleTx.wait();
-    const circleCreatedEvent = receipt.logs?.find(log => 
-      log.fragment?.name === "CircleCreated"
-    );
-    
-    if (circleCreatedEvent) {
-      const [circleId, owner, engine, tracker, goal] = circleCreatedEvent.args;
-      console.log("\nTest Circle Created:");
-      console.log("Circle ID:", circleId.toString());
-      console.log("Owner:", owner);
-      console.log("Engine Address:", engine);
-      console.log("Tracker Address:", tracker);
-      console.log("Goal:", ethers.formatEther(goal), "BTC");
-    }
-
     // Save deployment addresses for frontend
-    const fs = require("fs");
     const config = {
       network: "citrea-testnet",
       circleFactory: circleFactory.target,
+      // badgeSystem: badgeSystemAddress,
       btcOracle: btcTimestampMock.target,
       semaphore: semaphoreMock.target
     };
@@ -82,7 +74,7 @@ async function main() {
     console.log("\nConfig saved to frontend/src/config.json");
     console.log("Final nonce:", currentNonce);
   } catch (error) {
-    console.error("Error at nonce:", currentNonce, error);
+    console.error("Deployment failed at nonce:", currentNonce, error);
     throw error;
   }
 }

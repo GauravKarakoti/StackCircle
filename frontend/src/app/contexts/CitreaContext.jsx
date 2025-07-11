@@ -19,8 +19,8 @@ export const CitreaProvider = ({ children }) => {
 
   
   // Citrea testnet configuration
-  const FACTORY_ADDRESS = '0x019D3735b55cA4385660A3CE08e6Ba8e1C68640e'; 
-  const BTC_ORACLE_ADDRESS = '0x751cE5d771Fac1dA6D44Ad00cCba49f312d8A322'; 
+  const FACTORY_ADDRESS = '0x2092C31b6e0bB90dCD73a576b83449bCea003554'; 
+  const BTC_ORACLE_ADDRESS = '0x6966bfCfD011F1Cf10C4bc507d0C51c12b028E80'; 
   
   // Initialize provider and contracts
   const init = useCallback(async () => {
@@ -38,7 +38,10 @@ export const CitreaProvider = ({ children }) => {
       // Create contract instances with signer
       const factory = new ethers.Contract(
         FACTORY_ADDRESS,
-        ['function createCircle(string,uint256,uint256,uint256)'],
+        [
+          'function createCircle(string,uint256,uint256,uint256)',
+          'function getCirclesForMember(address) returns (uint256[])'
+        ],
         signer
       );
       setCircleFactory(factory);
@@ -184,8 +187,9 @@ export const CitreaProvider = ({ children }) => {
     requestTestnetBTC,
     disconnectWallet,
     isRequesting,
+    contract: circleFactory,
     btcOracle
-  }), [provider, signer, account, connectWallet, createCircle, requestTestnetBTC, isRequesting, disconnectWallet, btcOracle]);
+  }), [provider, signer, account, connectWallet, createCircle, requestTestnetBTC, isRequesting, disconnectWallet, circleFactory, btcOracle]);
 
   return (
     <CitreaContext.Provider value={contextValue}>

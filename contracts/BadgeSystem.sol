@@ -2,10 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ICircleFactory.sol";
 
-contract BadgeSystem is ERC1155, Ownable {
+contract BadgeSystem is ERC1155 {
     ICircleFactory public factory;
     
     // Badge types: 1 = Streak, 2 = Contribution, 3 = Governance

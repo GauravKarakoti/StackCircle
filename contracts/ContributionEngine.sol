@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import "./interfaces/IBtcTimeStamp.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./CircleFactory.sol";
 
 contract ContributionEngine is Ownable {
     string public name;
@@ -69,10 +68,6 @@ contract ContributionEngine is Ownable {
                 abi.encodeWithSignature("recordContribution(address)", msg.sender)
             );
             require(success, "Streak update failed");
-        }
-
-        if (members[msg.sender].totalContributed >= 0.1 ether) {
-            IBadgeSystem(badgeSystem).mintBadge(circleId, msg.sender, 2);
         }
         
         emit ContributionMade(
