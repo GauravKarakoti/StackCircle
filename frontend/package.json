@@ -9,10 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.52.0",
+    "axios": "^1.10.0",
     "browserify-zlib": "^0.2.0",
     "crypto-browserify": "^3.12.1",
     "d3": "^7.9.0",
-    "ethers": "^6.14.4",
+    "ethers": "^6.15.0",
     "https-browserify": "^1.0.0",
     "next": "15.3.3",
     "os-browserify": "^0.3.0",

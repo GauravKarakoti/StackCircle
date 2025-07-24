@@ -1,45 +1,59 @@
+import axios from 'axios';
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   try {
     const { address } = await request.json();
-    const faucetUrl = 'https://citrea.xyz/faucet';
+    const faucetUrl = 'https://citrea.xyz/api/faucet'; // Correct API endpoint
+    console.log('Faucet request for address:', address);
     
-    // Use text instead of json to handle non-JSON responses
-    const response = await fetch(faucetUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Origin': 'https://citrea.xyz'
-      },
-      body: JSON.stringify({ address })
-    });
-    
-    // Handle both text and JSON responses
-    const responseText = await response.text();
-    
-    try {
-      // Try to parse as JSON
-      const jsonData = JSON.parse(responseText);
-      return Response.json(jsonData);
-    } catch {
-      // Handle non-JSON responses
-      if (responseText.includes("successful") || response.ok) {
-        return Response.json({ 
-          success: true, 
-          message: "Test BTC requested successfully"
-        });
-      } else {
-        return Response.json({ 
-          success: false, 
-          error: responseText || 'Faucet request failed' 
-        }, { status: 500 });
+    const response = await axios.post(
+      faucetUrl,
+      { address },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'https://citrea.xyz'
+        }
       }
+    );
+    
+    console.log('Faucet response:', response.data);
+    
+    // Handle actual response format from Citrea
+    if (response.data && response.data.success) {
+      return Response.json({ 
+        success: true, 
+        message: response.data.message || 'Test BTC requested successfully'
+      });
+    } else {
+      return Response.json({ 
+        success: false, 
+        error: response.data?.error || 'Faucet request failed'
+      }, { status: 400 });
     }
   } catch (error) {
+    // Handle axios errors
+    let errorMessage = 'Network error - please try again';
+    
+    if (error.response) {
+      // Handle HTML responses
+      if (error.response.headers['content-type']?.includes('text/html')) {
+        errorMessage = 'Faucet API returned HTML instead of JSON. Please check the endpoint.';
+      } 
+      // Handle actual error responses
+      else if (error.response.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    console.error('Faucet error:', errorMessage);
     return Response.json({ 
       success: false, 
-      error: error.message || 'Network error' 
+      error: errorMessage 
     }, { status: 500 });
   }
 }

@@ -6,13 +6,19 @@ import Governance from './Governance';
 import ReminderSubscription from './ReminderSubscription';
 import * as d3 from 'd3';
 import '../globals.css';
+import { ethers } from 'ethers';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const [circles, setCircles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { account, contract } = useCitrea();
+  const { account, contract, provider, fetchProposals, contributeToCircle, inviteMember } = useCitrea();
   const [activeCircle, setActiveCircle] = useState(null);
   const [badges, setBadges] = useState([1, 3]);
+  const [isContributing, setIsContributing] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [memberAddress, setMemberAddress] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
 
   useEffect(() => {
     if (!account || !contract) return;
@@ -22,35 +28,88 @@ const Dashboard = () => {
       setLoading(true);
       try {
         if (contract.getCirclesForMember) {
-          // Get circle IDs for the current account
-          const circleIds = await contract.getCirclesForMember(account);
-          
-          // Create mock circles based on the retrieved IDs
-          const mockCircles = circleIds.map((id, index) => {
-            const circleId = Number(id); // Convert BigNumber to number
-            
-            return {
-              id: circleId,
-              name: `Circle ${index + 1}`,
-              goal: (index + 1) * 0.5, // Dynamic goal based on index
-              saved: (index + 1) * 0.15, // Dynamic saved amount
-              members: 4 + index * 2, // Dynamic member count
-              streak: 3 + index, // Dynamic streak
-              proposals: circleId % 2 === 0 ? [] : [ // Alternate proposals
-                {
-                  id: 1,
-                  title: "Donate 10% to Charity",
-                  description: "Proposal to donate 10% of funds to Bitcoin developers",
-                  type: "DONATION",
-                  votesFor: 15,
-                  votesAgainst: 2,
-                  deadline: Date.now() + 86400000 // 1 day from now
-                }
-              ]
-            };
+          // 1. Kick off the “transaction” and grab the encoded calldata
+          const txResponse = await contract.getCirclesForMember(account);
+          console.log('Raw tx response:', txResponse);
+
+          // txResponse.data is the ABI‑encoded call payload for getCirclesForMember(address)
+          const callData = txResponse.data;
+          console.log('Call data:', callData);
+
+          // 2. Do a low‑level eth_call using that exact calldata
+          const rawReturn = await provider.call({
+            to: contract.target,
+            data: callData,
           });
+
+          // 3. Decode the returned bytes with the same ABI
+          //    decodeFunctionResult returns an array matching the function’s outputs
+          const resultProxy = contract.interface.decodeFunctionResult(
+            'getCirclesForMember',
+            rawReturn
+          );
+          const bigNumberArray = Array.isArray(resultProxy[0])
+            ? resultProxy[0]
+            : [ resultProxy[0] ];
+          console.log('Decoded circle IDs:', bigNumberArray);
           
-          setCircles(mockCircles);
+          const onchainCircles = await Promise.all(
+            bigNumberArray.map(async (id) => {
+              const circleCalldata = contract.interface.encodeFunctionData(
+                'getCircle',
+                [ id ]
+              );
+              console.log(`Fetching circle ${id} with calldata:`, circleCalldata);
+
+              const rawCircle = await provider.call({
+                to: contract.target,
+                data: circleCalldata
+              });
+              console.log(`Raw circle data for ${id}:`, rawCircle);
+
+              const fn = contract.interface.getFunction('getCircle(uint256)');
+              const tuple = contract.interface.decodeFunctionResult(fn, rawCircle);
+              const circleData = tuple[0];
+              console.log(`Circle ${id} data:`, circleData);
+              const engineAddress = circleData[0];
+              const engineContract = new ethers.Contract(
+                engineAddress,
+                ['function contributionAmount() view returns (uint256)'],
+                provider
+              );
+              const contributionAmountWei = await engineContract.contributionAmount();
+              const contributionAmount = Number(ethers.formatEther(contributionAmountWei));
+              const governance = circleData[2];
+              console.log(`Circle ${id} governance address:`, governance);
+              const governanceContract = new ethers.Contract(
+                governance,
+                ["function proposalCount() view returns (uint256)"],
+                provider
+              );
+              const proposalCount = await governanceContract.proposalCount();
+              const proposalIds = Array.from({length: Number(proposalCount)}, (_, i) => i + 1);
+              
+              const proposals = proposalCount > 0 
+                ? await fetchProposals(governance, proposalIds)
+                : [];
+              return {
+                id,
+                name: circleData[3],
+                goal: Number(ethers.formatEther(circleData[4])), 
+                saved: 0,                
+                members: circleData[6],            
+                streak: circleData[7],               
+                governance,
+                engineAddress, 
+                contributionAmount,
+                proposals
+              };
+            })
+          );
+          setCircles(onchainCircles);
+        } else {
+          console.error("getCirclesForMember method not found on contract");
+          setCircles([]);
         }
       } catch (error) {
         console.error("Failed to fetch circles:", error);
@@ -91,7 +150,7 @@ const Dashboard = () => {
     };
     
     fetchCircles();
-  }, [account, contract]);
+  }, [account, contract, fetchProposals]);
   
   // Render progress chart
   useEffect(() => {
@@ -118,9 +177,15 @@ const Dashboard = () => {
         .enter()
         .append('rect')
         .attr('x', d => x(d.name))
-        .attr('y', d => y(d.saved / d.goal))
+        .attr('y', d => {
+          const ratio = d.goal > 0 ? Math.min(1, d.saved / d.goal) : 0;
+          return y(ratio);
+        })
         .attr('width', x.bandwidth())
-        .attr('height', d => height - margin.bottom - y(d.saved / d.goal))
+        .attr('height', d => {
+          const ratio = d.goal > 0 ? Math.min(1, d.saved / d.goal) : 0;
+          return height - margin.bottom - y(ratio);
+        })
         .attr('fill', '#F97316');
       
       // Add labels
@@ -128,13 +193,79 @@ const Dashboard = () => {
         .data(circles)
         .enter()
         .append('text')
-        .text(d => `${Math.round((d.saved / d.goal) * 100)}%`)
+        .text(d => {
+          if (d.goal <= 0) return '0%';
+          return `${Math.round((d.saved / d.goal) * 100)}%`;
+        })
         .attr('x', d => x(d.name) + x.bandwidth() / 2)
-        .attr('y', d => y(d.saved / d.goal) - 5)
+        .attr('y', d => {
+          const ratio = d.goal > 0 ? Math.min(1, d.saved / d.goal) : 0;
+          return y(ratio) - 5;
+        })
         .attr('text-anchor', 'middle')
         .attr('fill', 'black');
     }
   }, [circles, activeCircle]);
+
+  const updateProposals = (circleId, newProposals) => {
+    setCircles(prev => prev.map(circle => 
+      circle.id === circleId ? {...circle, proposals: newProposals} : circle
+    ));
+    
+    if (activeCircle?.id === circleId) {
+      setActiveCircle(prev => ({...prev, proposals: newProposals}));
+    }
+  };
+
+  const handleInviteMember = async () => {
+    if (!memberAddress || !ethers.isAddress(memberAddress)) {
+      toast.error('Please enter a valid Ethereum address');
+      return;
+    }
+
+    setIsInviting(true);
+    try {
+      await inviteMember(Number(activeCircle.id), memberAddress);
+      toast.success(`Successfully invited ${memberAddress}!`);
+      
+      // Reset form
+      setMemberAddress('');
+      setShowInviteForm(false);
+    } catch (error) {
+      toast.error(`Failed to invite member: ${error.message}`);
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleContribution = async () => {
+    if (!activeCircle?.engineAddress) return;
+    
+    setIsContributing(true);
+    try {
+      await contributeToCircle(
+        activeCircle.engineAddress, 
+        activeCircle.contributionAmount
+      );
+      toast.success('Contribution successful!');
+      
+      // Update UI optimistically
+      const newSaved = activeCircle.saved + activeCircle.contributionAmount;
+      setActiveCircle(prev => ({...prev, saved: newSaved}));
+      
+      // Update circles list
+      setCircles(prev => prev.map(circle => 
+        circle.id === activeCircle.id 
+          ? {...circle, saved: newSaved} 
+          : circle
+      ));
+    } catch (error) {
+      toast.error(`Contribution failed: ${error.message}`);
+      console.error(error);
+    } finally {
+      setIsContributing(false);
+    }
+  };
   
   if (!account) {
     return (
@@ -228,7 +359,11 @@ const Dashboard = () => {
                   <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
                     <div 
                       className="bg-orange-600 h-2.5 rounded-full" 
-                      style={{ width: `${(activeCircle.saved / activeCircle.goal) * 100}%` }}
+                      style={{ 
+                        width: `${activeCircle?.goal ? 
+                          Math.min(100, (activeCircle.saved / activeCircle.goal) * 100) : 
+                          0}%` 
+                      }}
                     ></div>
                   </div>
                   <p className="mt-2">
@@ -253,18 +388,76 @@ const Dashboard = () => {
               <BadgeDisplay badges={badges} />
               
               {/* Governance Component */}
-              <Governance circleId={activeCircle.id} proposals={activeCircle.proposals} />
+              <Governance 
+                circleId={activeCircle.id} 
+                governanceAddress={activeCircle.governance}
+                proposals={activeCircle.proposals}
+                updateProposals={updateProposals}
+              />
               
               {/* Reminder Subscription */}
-              <ReminderSubscription />
+              <ReminderSubscription circleId={Number(activeCircle.id)} />
 
               <div className="mt-6 flex space-x-4">
-                <button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded">
-                  Make Contribution
+                <button 
+                  onClick={handleContribution}
+                  disabled={isContributing}
+                  className={`flex-1 ${
+                    isContributing 
+                      ? 'bg-orange-300 cursor-not-allowed' 
+                      : 'bg-orange-500 hover:bg-orange-600'
+                  } text-white font-bold py-3 rounded flex items-center justify-center`}
+                >
+                  {isContributing ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    `Make Contribution (${activeCircle.contributionAmount} BTC)`
+                  )}
                 </button>
-                <button className="flex-1 bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold py-3 rounded">
+                <button 
+                  onClick={() => setShowInviteForm(true)}
+                  className="flex-1 bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold py-3 rounded"
+                >
                   Invite Members
                 </button>
+
+                {showInviteForm && (
+                  <div className="mt-4 p-4 bg-orange-50 rounded-lg">
+                    <h4 className="font-bold mb-2">Invite New Member</h4>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={memberAddress}
+                        onChange={(e) => setMemberAddress(e.target.value)}
+                        placeholder="Enter member's address (0x...)"
+                        className="flex-1 border border-orange-300 rounded px-3 py-2"
+                      />
+                      <button
+                        onClick={handleInviteMember}
+                        disabled={isInviting}
+                        className={`${
+                          isInviting 
+                            ? 'bg-orange-300 cursor-not-allowed' 
+                            : 'bg-orange-500 hover:bg-orange-600'
+                        } text-white font-bold py-2 px-4 rounded`}
+                      >
+                        {isInviting ? 'Sending...' : 'Send Invite'}
+                      </button>
+                      <button
+                        onClick={() => setShowInviteForm(false)}
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

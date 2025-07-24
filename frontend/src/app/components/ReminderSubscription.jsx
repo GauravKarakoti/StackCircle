@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useContext } from 'react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+import { useCitrea } from '../contexts/CitreaContext';
 
-const ReminderSubscription = () => {
+const ReminderSubscription = ({ circleId }) => {
+  const { account } = useCitrea();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [reminderSettings, setReminderSettings] = useState({
     contribution: true,
@@ -8,21 +12,75 @@ const ReminderSubscription = () => {
     streak: true,
     frequency: 'daily'
   });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('reminderSettings');
+    const savedSubscription = localStorage.getItem('isSubscribed');
+    
+    if (savedSettings) {
+      setReminderSettings(JSON.parse(savedSettings));
+    }
+    
+    if (savedSubscription) {
+      setIsSubscribed(savedSubscription === 'true');
+    }
+  }, []);
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    if (isSubscribed) {
+      localStorage.setItem('reminderSettings', JSON.stringify(reminderSettings));
+      localStorage.setItem('isSubscribed', 'true');
+    }
+  }, [reminderSettings, isSubscribed]);
 
   const handleSubscription = async () => {
     try {
-      // Push Protocol integration
-      if (window.ethereum && window.ethereum.isPushEnabled) {
-        await window.ethereum.push.enable();
+      setIsSaving(true);
+      
+      // Save subscription to backend
+      const response = await axios.post('/api/reminders', {
+        circleId,
+        isSubscribed: true,
+        settings: reminderSettings,
+        walletAddress: account // Use the connected wallet address
+      });
+      
+      if (response.data.success) {
         setIsSubscribed(true);
-        alert('Reminders enabled successfully!');
+        toast.success('Reminders enabled successfully!');
       } else {
-        alert('Push notifications not available - using email reminders');
-        setIsSubscribed(true);
+        toast.error('Failed to enable reminders');
       }
     } catch (error) {
       console.error('Reminder enablement failed:', error);
-      alert('Failed to enable reminders. Please try again.');
+      toast.error('Failed to enable reminders. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    try {
+      setIsSaving(true);
+      
+      // Remove subscription from backend
+      await axios.post('/api/reminders', {
+        circleId,
+        isSubscribed: false,
+        walletAddress: account // Use the connected wallet address
+      });
+      
+      setIsSubscribed(false);
+      localStorage.removeItem('isSubscribed');
+      toast.success('Reminders disabled');
+    } catch (error) {
+      console.error('Unsubscribe failed:', error);
+      toast.error('Failed to disable reminders');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -31,6 +89,27 @@ const ReminderSubscription = () => {
       ...prev,
       [setting]: !prev[setting]
     }));
+  };
+
+  const handleUpdateSettings = async () => {
+    try {
+      setIsSaving(true);
+      
+      // Update settings in backend
+      await axios.post('/api/reminders', {
+        circleId,
+        isSubscribed: true,
+        settings: reminderSettings,
+        walletAddress: account // Use the connected wallet address
+      });
+      
+      toast.success('Settings updated!');
+    } catch (error) {
+      console.error('Failed to update settings:', error);
+      toast.error('Failed to update settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -46,26 +125,57 @@ const ReminderSubscription = () => {
         {!isSubscribed ? (
           <button
             onClick={handleSubscription}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg flex items-center"
+            disabled={isSaving || !account}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg flex items-center disabled:opacity-75"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-            </svg>
-            Enable Reminders
+            {isSaving ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Enabling...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                </svg>
+                Enable Reminders
+              </>
+            )}
           </button>
         ) : (
-          <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            Reminders Active
+          <div className="flex items-center space-x-3">
+            <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Reminders Active
+            </div>
+            <button
+              onClick={handleUnsubscribe}
+              disabled={isSaving}
+              className="text-red-600 hover:text-red-800 text-sm disabled:opacity-75"
+            >
+              Disable
+            </button>
           </div>
         )}
       </div>
       
       {isSubscribed && (
         <div className="mt-4 pt-4 border-t border-orange-200">
-          <h5 className="font-medium mb-3">Notification Settings</h5>
+          <div className="flex justify-between items-center mb-3">
+            <h5 className="font-medium">Notification Settings</h5>
+            <button
+              onClick={handleUpdateSettings}
+              disabled={isSaving}
+              className="text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded disabled:opacity-75"
+            >
+              {isSaving ? 'Saving...' : 'Save Settings'}
+            </button>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center">
@@ -138,6 +248,7 @@ const ReminderSubscription = () => {
                     frequency: e.target.value
                   }))}
                   className="border rounded px-3 py-1"
+                  disabled={isSaving}
                 >
                   <option value="daily">Daily Digest</option>
                   <option value="immediate">Immediately</option>

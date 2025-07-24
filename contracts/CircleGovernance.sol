@@ -23,12 +23,15 @@ contract CircleGovernance is Ownable {
     uint256 public proposalCount;
     mapping(uint256 => Proposal) public proposals;
     uint256 public votingPeriod = 3 days;
+    address public factory;
     
     event ProposalCreated(uint256 id, ProposalType pType, string title);
     event Voted(uint256 indexed proposalId, address indexed voter, bool support);
     event ProposalExecuted(uint256 id, bool result);
     
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(address initialOwner) Ownable(initialOwner) {
+        factory = msg.sender; // Store factory address
+    }
     
     function createProposal(
         ProposalType pType,
@@ -36,7 +39,8 @@ contract CircleGovernance is Ownable {
         string memory description,
         uint256 amount,
         address recipient
-    ) external onlyOwner {
+    ) external {
+        require(msg.sender == factory || msg.sender == owner(), "Not authorized");
         proposalCount++;
         Proposal storage p = proposals[proposalCount];
         p.id = proposalCount;
@@ -48,6 +52,33 @@ contract CircleGovernance is Ownable {
         p.deadline = block.timestamp + votingPeriod;
         
         emit ProposalCreated(proposalCount, pType, title);
+    }
+
+    function getProposal(uint256 id) external view returns (
+        uint256, 
+        ProposalType, 
+        string memory, 
+        string memory, 
+        uint256, 
+        address, 
+        uint256, 
+        uint256, 
+        uint256, 
+        bool
+    ) {
+        Proposal storage p = proposals[id];
+        return (
+            p.id,
+            p.pType,
+            p.title,
+            p.description,
+            p.amount,
+            p.recipient,
+            p.deadline,
+            p.yesVotes,
+            p.noVotes,
+            p.executed
+        );
     }
     
     function vote(uint256 proposalId, bool support) external {

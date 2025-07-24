@@ -8,6 +8,7 @@ import "./interfaces/IBadgeSystem.sol";
 contract StreakTracker {
     ISemaphore public semaphore;
     address public engine;
+    address public factory;
     IBadgeSystem public badgeSystem;
     uint256 public circleId;
     
@@ -41,6 +42,7 @@ contract StreakTracker {
     function setEngine(address _engine) external {
         require(engine == address(0), "Already set");
         engine = _engine;
+        factory = ContributionEngine(engine).factory();
     }
     
     function recordContribution(address member) external {
@@ -99,6 +101,9 @@ contract StreakTracker {
         // Update longest streak if needed
         if (streak.current > streak.longest) {
             streak.longest = streak.current;
+            if (factory != address(0)) {
+                CircleFactory(factory).updateLongestStreak(circleId, streak.current);
+            }
         }
 
         if (streak.current == 7 && address(badgeSystem) != address(0)) {
