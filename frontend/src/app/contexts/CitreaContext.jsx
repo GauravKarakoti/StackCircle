@@ -19,8 +19,8 @@ export const CitreaProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   // Citrea testnet configuration
-  const FACTORY_ADDRESS = '0x655965607F0F6b397a22E55474999d165D163064'; 
-  const BTC_ORACLE_ADDRESS = '0xb3b941282635cFBE700D241282d1715347672DAa'; 
+  const FACTORY_ADDRESS = '0x073fD36050BE24618d40982d997061539DAD3b04'; 
+  const BTC_ORACLE_ADDRESS = '0x3f5C249af9c3CEDa938f37C8429fc30090DceE23'; 
   
   // Initialize provider and contracts
   const init = useCallback(async () => {
@@ -43,7 +43,7 @@ export const CitreaProvider = ({ children }) => {
           'function getCirclesForMember(address) returns (uint256[])',
           'function getCircleMembers(uint256) returns (address[])',
           'function circleExists(uint256) returns (bool)',
-          'function getCircle(uint256) returns ((address,address,address,string,uint256,uint256,uint256,uint256))',
+          'function getCircle(uint256) returns ((address,address,address,string,uint256,uint256,uint256,uint256,uint256))',
           'function createProposal(uint256, uint8, string ,string ,uint256, address)',
           'function inviteMember(uint256, address)'
         ],

@@ -44,12 +44,10 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
     updateProposals(circleId, updated);
   };
 
-  const handleVote = async (support) => {
-    if (!votingProposal) return;
-    
+  const handleVote = async (id, support) => {    
     try {
       setIsVoting(true);
-      await voteOnProposal(governanceAddress, votingProposal.id, support);
+      await voteOnProposal(governanceAddress, id, support);
       await refetchProposals();
       toast.success(`Voted ${support ? 'FOR' : 'AGAINST'} proposal!`);
       
@@ -93,42 +91,56 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
       {proposals.length > 0 ? (
         <div className="space-y-4">
           {proposals.map(proposal => (
-            <div key={proposal.id} className="border border-orange-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex justify-between">
-                <h4 className="font-bold text-lg">{proposal.title}</h4>
-                <span className={`px-2 py-1 rounded text-xs ${
-                  proposal.type === 'DONATION' ? 'bg-purple-100 text-purple-800' : 
-                  proposal.type === 'WITHDRAWAL' ? 'bg-blue-100 text-blue-800' : 
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {proposal.type}
-                </span>
+            <div key={proposal.id} className="border border-orange-200 rounded-xl bg-white overflow-hidden p-4 hover:shadow-md transition-shadow">
+              <div className={`p-4 ${
+                proposal.type === 'WITHDRAWAL' ? 'bg-blue-50' : 
+                proposal.type === 'DONATION' ? 'bg-purple-50' : 
+                'bg-green-50'
+              }`}>
+                <div className="flex justify-between">
+                  <h4 className="font-bold text-lg">{proposal.title}</h4>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    proposal.type === 'DONATION' ? 'bg-blue-100 text-blue-800' : 
+                    proposal.type === 'WITHDRAWAL' ? 'bg-purple-100 text-purple-800' : 
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {proposal.type}
+                  </span>
+                </div>
+                <p className="text-gray-600 my-2">{proposal.description}</p>
               </div>
-              <p className="text-gray-600 my-2">{proposal.description}</p>
-              
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
-                    <span className="text-sm">{proposal.votesFor} For</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-red-500 mr-1"></div>
-                    <span className="text-sm">{proposal.votesAgainst} Against</span>
-                  </div>
+
+              <div className="p-4">
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-gray-600">Deadline</span>
+                  <span className="font-medium">
+                    {new Date().toLocaleDateString()}
+                  </span>
                 </div>
                 
-                <button 
-                  onClick={() => {
-                    setVotingProposal(proposal);
-                    if (voteModalRef.current) {
-                      voteModalRef.current.showModal();
-                    }
-                  }}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 text-sm rounded"
-                >
-                  Vote Now
-                </button>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
+                  <div 
+                    className="h-full bg-orange-500" 
+                    style={{ 
+                      width: `${(proposal.votesFor / (proposal.votesFor + proposal.votesAgainst)) * 100}%` 
+                    }}
+                  />
+                </div>
+                
+                <div className="flex justify-between">
+                  <button 
+                    onClick={() => handleVote(proposal.id, true)}
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-l-md"
+                  >
+                    For ({proposal.votesFor})
+                  </button>
+                  <button 
+                    onClick={() => handleVote(proposal.id, false)}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-r-md"
+                  >
+                    Against ({proposal.votesAgainst})
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -145,50 +157,96 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
         </div>
       )}
       
-      {/* Vote Modal - Moved outside the loop */}
-      <dialog 
-        ref={voteModalRef}
-        className="rounded-xl shadow-2xl backdrop:bg-black/50 p-0 max-w-md w-full"
-      >
+      {/* Proposal Creation Modal */}
+      <dialog id="proposal-modal" className="rounded-xl shadow-2xl backdrop:bg-black/50 p-0 max-w-md w-full">
         <div className="p-6">
-          <h3 className="text-xl font-bold mb-4">Cast Your Vote</h3>
+          <h3 className="text-xl font-bold mb-4">Create New Proposal</h3>
           
-          {votingProposal && (
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2">Proposal Title</label>
+            <input
+              type="text"
+              name="title"
+              value={newProposal.title}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border rounded"
+              placeholder="What's your proposal about?"
+            />
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2">Description</label>
+            <textarea
+              name="description"
+              value={newProposal.description}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border rounded"
+              rows="3"
+              placeholder="Explain your proposal in detail..."
+            ></textarea>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2">Proposal Type</label>
+            <select
+              name="type"
+              value={newProposal.type}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border rounded"
+            >
+              <option value="DONATION">Donation</option>
+              <option value="WITHDRAWAL">Withdrawal</option>
+              <option value="PARAM_CHANGE">Parameter Change</option>
+            </select>
+          </div>
+          
+          {(newProposal.type === 'DONATION' || newProposal.type === 'WITHDRAWAL') && (
             <>
-              <h4 className="font-bold text-lg mb-2">{votingProposal.title}</h4>
-              <p className="text-gray-600 mb-4">{votingProposal.description}</p>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Amount (BTC)</label>
+                <input
+                  type="number"
+                  name="amount"
+                  value={newProposal.amount}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded"
+                  placeholder="0.00"
+                  step="0.001"
+                  min="0.001"
+                />
+              </div>
               
-              <div className="flex space-x-4">
-                <button 
-                  disabled={isVoting}
-                  onClick={() => handleVote(true)}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded disabled:opacity-50"
-                >
-                  {isVoting ? 'Processing...' : 'Vote For'}
-                </button>
-                <button 
-                  disabled={isVoting}
-                  onClick={() => handleVote(false)}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded disabled:opacity-50"
-                >
-                  {isVoting ? 'Processing...' : 'Vote Against'}
-                </button>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">
+                  {newProposal.type === 'DONATION' ? 'Recipient Address' : 'Withdrawal Address'}
+                </label>
+                <input
+                  type="text"
+                  name="recipient"
+                  value={newProposal.recipient}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded"
+                  placeholder="bc1q..."
+                />
               </div>
             </>
           )}
           
-          <button 
-            className="mt-4 w-full py-2 border border-gray-300 rounded text-gray-700"
-            onClick={() => voteModalRef.current?.close()}
-          >
-            Cancel
-          </button>
+          <div className="flex justify-end space-x-3 mt-6">
+            <button 
+              className="px-4 py-2 border border-gray-300 rounded text-gray-700"
+              onClick={() => document.getElementById('proposal-modal').close()}
+            >
+              Cancel
+            </button>
+            <button 
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded"
+              onClick={handleCreateProposal}
+            >
+              Create Proposal
+            </button>
+          </div>
         </div>
-      </dialog>
-      
-      {/* Proposal Creation Modal */}
-      <dialog id="proposal-modal" className="rounded-xl shadow-2xl backdrop:bg-black/50 p-0 max-w-md w-full">
-        {/* ... existing proposal modal code ... */}
       </dialog>
     </div>
   );

@@ -89,4 +89,33 @@ body {
   .mobile-p-4 {
     padding: 1rem;
   }
+
+  .circle-card {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+  }
+  
+  .progress-ring {
+    width: 6rem;
+    height: 6rem;
+  }
+  
+  .mobile-tabs {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .mobile-tabs button {
+    flex-shrink: 0;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
 }

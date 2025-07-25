@@ -14,6 +14,7 @@ contract ContributionEngine is Ownable {
     address public immutable factory;
     address public badgeSystem;
     uint256 public circleId;
+    uint256 public totalContributions;
     
     struct Member {
         uint256 lastContribution;
@@ -74,11 +75,16 @@ contract ContributionEngine is Ownable {
     function contribute() external payable {
         require(members[msg.sender].exists, "Not member");
         require(msg.value == contributionAmount, "Incorrect amount");
+        require(
+            block.timestamp > members[msg.sender].lastContribution + contributionPeriod/2,
+            "Contribution too soon"
+        );
         
         // Verify Bitcoin timestamp proof
         uint256 btcHeight = IBtcTimestamp(BTC_TIMESTAMP_ORACLE).verifyTimestamp(block.timestamp);
         
         // Update member stats
+        totalContributions += msg.value;
         members[msg.sender].lastContribution = block.timestamp;
         members[msg.sender].totalContributed += msg.value;
         
@@ -100,6 +106,8 @@ contract ContributionEngine is Ownable {
                 revert("Badge minting failed");
             }
         }
+
+        CircleFactory(factory).updateCircleTotalContributed(circleId, msg.value);
         
         emit ContributionMade(
             msg.sender,

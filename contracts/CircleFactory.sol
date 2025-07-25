@@ -20,6 +20,7 @@ contract CircleFactory is ERC721 {
         uint256 created;
         uint256 memberCount;   // Track number of members
         uint256 longestStreak;
+        uint256 totalContributed;
     }
 
     address public badgeSystem;
@@ -78,7 +79,8 @@ contract CircleFactory is ERC721 {
             goal: goal,
             created: block.timestamp,
             memberCount: 1,        // Creator is first member
-            longestStreak: 0
+            longestStreak: 0,
+            totalContributed: 0
         });
         
         // Additional setup
@@ -105,6 +107,11 @@ contract CircleFactory is ERC721 {
         );
         
         return newCircleId;
+    }
+
+    function updateCircleTotalContributed(uint256 circleId, uint256 amount) external {
+        require(circleIds[msg.sender] == circleId, "Unauthorized");
+        circles[circleId].totalContributed += amount;
     }
 
     function updateLongestStreak(uint256 circleId, uint256 streak) external {
@@ -149,21 +156,24 @@ contract CircleFactory is ERC721 {
     }
 
     function inviteMember(uint256 circleId, address newMember) external {
-        require(circleId > 0 && circleId <= circleCount, "CircleFactory: Invalid circle ID");
-
-        // Verify the person sending the invite (msg.sender) is already a member
+        require(circleId > 0 && circleId <= circleCount, "Invalid circle ID");
+        
+        // Verify caller is member
         bool isMember = false;
-        address[] storage members = circleMembers[circleId];
+        address[] memory members = circleMembers[circleId];
         for (uint i = 0; i < members.length; i++) {
             if (members[i] == msg.sender) {
                 isMember = true;
                 break;
             }
         }
-        require(isMember, "CircleFactory: Caller is not a circle member");
-
-        // As the factory (which is the owner), call addMember on the engine
-        ContributionEngine(circles[circleId].engine).addMember(newMember);
+        require(isMember, "Caller not a member");
+        
+        ContributionEngine engine = ContributionEngine(circles[circleId].engine);
+        engine.addMember(newMember);
+        
+        // Add to factory tracking
+        _addMemberToCircle(circleId, newMember);
     }
 
     function addMemberToCircle(uint256 circleId, address member) external {
