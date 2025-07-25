@@ -122,10 +122,10 @@ const connectWallet = async () => {
 ## Deployed Contracts (Citrea Testnet) 📍
 |Contract         |	Address                                     |
 |-----------------|---------------------------------------------|
-|SemaphoreMock	  | `0xc25eFD056F78f5656A8f292f13240249fA61AB06`|
-|BtcTimestampMock |	`0x6966bfCfD011F1Cf10C4bc507d0C51c12b028E80`|
-|StreakTracker	  | `0x75d5f7935cfBE3d16fD915de24B84f36D61778E6`|
-|CircleFactory	  | `0x2092C31b6e0bB90dCD73a576b83449bCea003554`|
+|SemaphoreMock	  | `0xa535bDA556Ca7F30D8dF62420678e47A3175C65C`|
+|BtcTimestampMock |	`0x3f5C249af9c3CEDa938f37C8429fc30090DceE23`|
+|CircleFactory	  | `0x073fD36050BE24618d40982d997061539DAD3b04`|
+|BadgeSystem      | `0xC04F7a61Fc17df578FC806E101dbeD08bCfA0237`|
 
 ## Troubleshooting 🔧
 **Common Issues:**
