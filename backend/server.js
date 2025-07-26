@@ -16,7 +16,8 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // UPDATED: We only need the Deployer's address now from the env
-const { OWNER_PRIVATE_KEY, CITREA_RPC_URL, DEPLOYER_CONTRACT_ADDRESS } = process.env;
+const { OWNER_PRIVATE_KEY, CITREA_RPC_URL } = process.env;
+const DEPLOYER_CONTRACT_ADDRESS='0xa3411934699773F713a9Cb9e65Ac66acB1e4D79D';
 
 if (!OWNER_PRIVATE_KEY || !CITREA_RPC_URL || !DEPLOYER_CONTRACT_ADDRESS) {
   console.error("🔥 Missing required environment variables. Check for DEPLOYER_CONTRACT_ADDRESS.");

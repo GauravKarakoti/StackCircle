@@ -1,6 +1,4 @@
 import axios from 'axios';
-import dotenv from 'dotenv';
-dotenv.config();
 
 /**
  * Next.js API Route Handler for creating a circle.
@@ -10,7 +8,8 @@ dotenv.config();
  */
 export async function POST(req) {
   // 1. Get the URL of your dedicated backend server from environment variables.
-  const backendUrl = "http://localhost:5001";
+//   const backendUrl = "http://localhost:5001";
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   if (!backendUrl) {
     console.error("🔥 BACKEND_URL environment variable not set.");
