@@ -2,14 +2,20 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./ContributionEngine.sol";
 import "./StreakTracker.sol";
 import "./BadgeSystem.sol";
 import "./CircleGovernance.sol";
 
-contract CircleFactory is ERC721 {
+// The CircleFactory now acts as a registry and no longer deploys contracts itself
+// to avoid exceeding the contract size limit. It is also Ownable to control
+// who can register new circles.
+contract CircleFactory is ERC721, Ownable {
     uint256 public circleCount;
     address public immutable BTC_TIMESTAMP_ORACLE;
+    uint256 public constant PREMIUM_FEE = 0.01 ether;
     
     struct Circle {
         address engine;
@@ -29,7 +35,9 @@ contract CircleFactory is ERC721 {
     mapping(address => uint256) public circleIds;
     mapping(address => uint256[]) private memberCircles;
     mapping(uint256 => address[]) private circleMembers;
-    
+    mapping(uint256 => bool) public premiumCircles;
+    mapping(uint256 => bytes32) public merkleRoots;
+
     event CircleCreated(
         uint256 indexed circleId,
         address indexed owner,
@@ -41,68 +49,58 @@ contract CircleFactory is ERC721 {
     event MemberAdded(uint256 indexed circleId, address indexed member);
     event ProposalCreated(uint256 indexed circleId, uint256 proposalId);
 
-    constructor(address _btcOracle) ERC721("StackCircle", "SCIR") {
+    // The constructor now accepts its dependencies instead of creating them.
+    // It takes the BTC oracle, the pre-deployed BadgeSystem, and the initial owner.
+    constructor(
+        address _btcOracle,
+        address _badgeSystem,
+        address initialOwner
+    ) ERC721("StackCircle", "SCIR") Ownable(initialOwner) {
         BTC_TIMESTAMP_ORACLE = _btcOracle;
-        badgeSystem = address(new BadgeSystem(address(this)));
+        badgeSystem = _badgeSystem;
     }
 
-    function createCircle(
+    // This function allows the owner (deployer) to register a new circle
+    // by providing the addresses of its pre-deployed component contracts.
+    function registerCircle(
         string memory name,
         uint256 goal,
-        uint256 contributionAmount,
-        uint256 period
-    ) external returns (uint256) {
+        address engine,
+        address tracker,
+        address governance,
+        address circleOwner,
+        bool isPremium
+    ) external payable onlyOwner returns (uint256) {
+        if (isPremium) {
+            require(msg.value >= PREMIUM_FEE, "Insufficient premium fee");
+        }
+
         circleCount++;
         uint256 newCircleId = circleCount;
-        
-        // Create contribution engine
-        ContributionEngine engine = new ContributionEngine(
-            name,
-            contributionAmount,
-            period,
-            BTC_TIMESTAMP_ORACLE,
-            address(this)
-        );
-        
-        // Create streak tracker
-        StreakTracker tracker = new StreakTracker();
-        
-        // Create governance contract
-        CircleGovernance governance = new CircleGovernance(msg.sender);
-        
-        // Update circle struct
+        premiumCircles[newCircleId] = isPremium;
+
         circles[newCircleId] = Circle({
-            engine: address(engine),
-            tracker: address(tracker),
-            governance: address(governance),
+            engine: engine,
+            tracker: tracker,
+            governance: governance,
             name: name,
             goal: goal,
             created: block.timestamp,
-            memberCount: 1,        // Creator is first member
+            memberCount: 1,       // Creator is first member
             longestStreak: 0,
             totalContributed: 0
         });
         
-        // Additional setup
-        engine.setBadgeSystem(badgeSystem);
-        tracker.setBadgeSystem(badgeSystem);
-        engine.setCircleId(newCircleId);
-        tracker.setCircleId(newCircleId);
-        tracker.setEngine(address(engine));
-        
-        // Mint NFT to creator
-        _safeMint(msg.sender, newCircleId);
-        circleIds[address(engine)] = newCircleId;
+        _safeMint(circleOwner, newCircleId);
+        circleIds[engine] = newCircleId;
 
-        // Add creator as first member
-        _addMemberToCircle(newCircleId, msg.sender);
-        engine.addMember(msg.sender);
+        _addMemberToCircle(newCircleId, circleOwner);
         
         emit CircleCreated(
             newCircleId,
-            msg.sender,
-            address(engine),
-            address(tracker),
+            circleOwner,
+            engine,
+            tracker,
             goal
         );
         
@@ -122,7 +120,6 @@ contract CircleFactory is ERC721 {
         }
     }
 
-    // Add this new function to create proposals
     function createProposal(
         uint256 circleId,
         CircleGovernance.ProposalType proposalType,
@@ -133,7 +130,6 @@ contract CircleFactory is ERC721 {
     ) external {
         require(circleId > 0 && circleId <= circleCount, "Invalid circle ID");
         
-        // Verify caller is a member of this circle
         bool isMember = false;
         address[] memory members = circleMembers[circleId];
         for (uint i = 0; i < members.length; i++) {
@@ -144,21 +140,30 @@ contract CircleFactory is ERC721 {
         }
         require(isMember, "Caller is not a circle member");
         
-        // Get the governance contract for this circle
         CircleGovernance governance = CircleGovernance(circles[circleId].governance);
         
-        // Create the proposal
+        // First, create the proposal. The function does not return a value.
         governance.createProposal(proposalType, title, description, amount, recipient);
         
-        // Emit event for frontend tracking
-        uint256 proposalId = governance.proposalCount(); // Assuming this method exists
+        // Then, get the ID of the newly created proposal.
+        // This assumes CircleGovernance has a public `proposalCount` state variable or getter.
+        uint256 proposalId = governance.proposalCount();
+        
         emit ProposalCreated(circleId, proposalId);
+    }
+
+    function verifyMembership(
+        uint256 circleId,
+        address member,
+        bytes32[] calldata proof
+    ) external view returns (bool) {
+        bytes32 leaf = keccak256(abi.encodePacked(member));
+        return MerkleProof.verify(proof, merkleRoots[circleId], leaf);
     }
 
     function inviteMember(uint256 circleId, address newMember) external {
         require(circleId > 0 && circleId <= circleCount, "Invalid circle ID");
         
-        // Verify caller is member
         bool isMember = false;
         address[] memory members = circleMembers[circleId];
         for (uint i = 0; i < members.length; i++) {
@@ -172,7 +177,6 @@ contract CircleFactory is ERC721 {
         ContributionEngine engine = ContributionEngine(circles[circleId].engine);
         engine.addMember(newMember);
         
-        // Add to factory tracking
         _addMemberToCircle(circleId, newMember);
     }
 
@@ -182,7 +186,6 @@ contract CircleFactory is ERC721 {
     }
     
     function _addMemberToCircle(uint256 circleId, address member) private {
-        // Avoid duplicates
         for (uint i = 0; i < memberCircles[member].length; i++) {
             if (memberCircles[member][i] == circleId) return;
         }

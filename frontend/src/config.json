@@ -1,13 +1,17 @@
 {
-  "network": "citrea-testnet",
-  "circleFactory": "0x073fD36050BE24618d40982d997061539DAD3b04",
-  "badgeSystem": "0xC04F7a61Fc17df578FC806E101dbeD08bCfA0237",
-  "btcOracle": "0x3f5C249af9c3CEDa938f37C8429fc30090DceE23",
-  "semaphore": "0xa535bDA556Ca7F30D8dF62420678e47A3175C65C",
+  "network": "localhost",
+  "deployerContractAddress": "0xa3411934699773F713a9Cb9e65Ac66acB1e4D79D",
+  "circleFactory": "0xf3d5FA40A7aB6EC0fdaA26C9dB9245AAF22617f7",
+  "badgeSystem": "0xB720E8c4e2079e506A08c97BAE62652a3732A4eD",
+  "btcOracle": "0xFFE48e98EF520C451538706dbD603532C390aA11",
+  "treasury": "0x5703A129CaC5BC863252887Ca08420d01E2709C4",
+  "semaphore": "0x89d5b14484dC57BebA16D30b9f74A38712DE6ade",
+  "stackToken": "0x3592d781FFE7D46F41a6490Be70129f903Ce45Ea",
+  "lendingPool": "0x8d4CD53285631C54F7d69828e8e7Ea40cb89c5A4",
   "testCircle": {
     "id": "1",
-    "engine": "0x41Dd8401D0FE8BBcdA27887E24dE4BC5fC49c8bc",
-    "tracker": "0x22B7Ca31649F5B109dB51578Ed99aaA6b83391b4",
-    "governance": "0x753D345783A31058b77102668682a31a28b6D848"
+    "engine": "0x9f8EF0f50f1c9D4F111CB7310431D02b08DDd7b5",
+    "tracker": "0xb0bA3eCf21faC4B6a179b0693D95fbbFAC6b8A5F",
+    "governance": "0x405a3b5deA705e5AEF27c945cF473A56e247605d"
   }
 }

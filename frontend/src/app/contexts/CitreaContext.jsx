@@ -19,8 +19,8 @@ export const CitreaProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   // Citrea testnet configuration
-  const FACTORY_ADDRESS = '0x073fD36050BE24618d40982d997061539DAD3b04'; 
-  const BTC_ORACLE_ADDRESS = '0x3f5C249af9c3CEDa938f37C8429fc30090DceE23'; 
+  const FACTORY_ADDRESS = '0xf3d5FA40A7aB6EC0fdaA26C9dB9245AAF22617f7'; 
+  const BTC_ORACLE_ADDRESS = '0xFFE48e98EF520C451538706dbD603532C390aA11'; 
   
   // Initialize provider and contracts
   const init = useCallback(async () => {
@@ -232,21 +232,33 @@ export const CitreaProvider = ({ children }) => {
     }
   }, [resetWallet]);
   
-  // Create new circle
   const createCircle = useCallback(async (name, goal, amount, period) => {
-    if (!circleFactory) {
-      throw new Error('Circle factory contract not initialized');
+    if (!account) { // 'account' is the connected user's address
+      throw new Error('Wallet not connected');
     }
-    
-    const tx = await circleFactory.createCircle(
-      name,
-      ethers.parseEther(goal.toString()), // v6: parseEther instead of utils.parseEther
-      ethers.parseEther(amount.toString()),
-      period
-    );
-    await tx.wait();
-    return tx.hash;
-  }, [circleFactory]);
+
+    try {
+      // Call your new backend API endpoint
+      const response = await axios.post('/api/create-circle', { 
+        name,
+        goal,
+        amount,
+        period,
+        circleOwner: account // Pass the user's address to the backend
+      });
+
+      if (response.data.success) {
+        toast.success(response.data.message);
+        return response.data.txHash;
+      } else {
+        throw new Error(response.data.error || 'Failed to create circle.');
+      }
+    } catch (error) {
+      console.error('API call to create circle failed:', error);
+      // Re-throw the error so the component can catch it
+      throw error;
+    }
+  }, [account]);
 
   const requestTestnetBTC = useCallback(async () => {
     setIsRequesting(true);

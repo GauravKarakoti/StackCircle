@@ -29,8 +29,8 @@ contract CircleGovernance is Ownable {
     event Voted(uint256 indexed proposalId, address indexed voter, bool support);
     event ProposalExecuted(uint256 id, bool result);
     
-    constructor(address initialOwner) Ownable(initialOwner) {
-        factory = msg.sender; // Store factory address
+    constructor(address initialOwner, address _factoryAddress) Ownable(initialOwner) {
+        factory = _factoryAddress;
     }
     
     function createProposal(

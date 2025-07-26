@@ -4,8 +4,10 @@ pragma solidity ^0.8.20;
 import "./interfaces/ISemaphore.sol";
 import "./ContributionEngine.sol";
 import "./interfaces/IBadgeSystem.sol";
+import "./CircleFactory.sol";
+import "@openzeppelin/contracts/access/Ownable.sol"; 
 
-contract StreakTracker {
+contract StreakTracker is Ownable {
     ISemaphore public semaphore;
     address public engine;
     address public factory;
@@ -24,22 +26,22 @@ contract StreakTracker {
     event StreakUpdated(address indexed member, uint256 newStreak);
     event AnonymousStreakUpdated(uint256 nullifier, uint256 newStreak);
     
-    constructor() {
+    constructor() Ownable(msg.sender) {
         // Initialize with mainnet Semaphore address (testnet mock in deployment)
         semaphore = ISemaphore(0x0000000000000000000000000000000000000000);
     }
 
-    function setBadgeSystem(address _badgeSystem) external {
+    function setBadgeSystem(address _badgeSystem) external onlyOwner {
         require(address(badgeSystem) == address(0), "Already set");
         badgeSystem = IBadgeSystem(_badgeSystem);
     }
 
-    function setCircleId(uint256 _circleId) external {
+    function setCircleId(uint256 _circleId) external onlyOwner {
         require(circleId == 0, "Already set");
         circleId = _circleId;
     }
     
-    function setEngine(address _engine) external {
+    function setEngine(address _engine) external onlyOwner {
         require(engine == address(0), "Already set");
         engine = _engine;
         factory = ContributionEngine(engine).factory();
@@ -114,7 +116,7 @@ contract StreakTracker {
         emit StreakUpdated(member, streak.current);
     }
 
-    function setSemaphore(address _semaphore) external {
+    function setSemaphore(address _semaphore) external onlyOwner {
         semaphore = ISemaphore(_semaphore);
     }
 }

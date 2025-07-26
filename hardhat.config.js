@@ -23,6 +23,7 @@ module.exports = {
       url: CITREA_RPC,
       chainId: 5115,
       accounts: [PRIVATE_KEY],
+      timeout: 120000
     },
   },
   mocha: {
