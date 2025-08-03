@@ -14,7 +14,8 @@ async function main() {
     const factory = await ethers.getContractFactory(contractName);
     const contract = await factory.deploy(...args, { nonce: currentNonce++ });
     await contract.waitForDeployment();
-    console.log(`${contractName} deployed to: ${await contract.getAddress()}`);
+    const address = await contract.getAddress();
+    console.log(`${contractName} deployed to: ${address}`);
     return contract;
   };
 
@@ -25,7 +26,7 @@ async function main() {
       const tx = await contract[method](...args, opts);
       const receipt = await tx.wait();
       console.log(`✅ Tx: ${method}(${args.join(", ")}) confirmed.`);
-      return receipt; // Return the receipt for event parsing
+      return receipt;
     } catch (error) {
       console.error(`❌ Error in ${method}:`, error);
       if (error.data) {
@@ -43,95 +44,95 @@ async function main() {
   try {
     // 1. Deploy Governance Token, Treasury, and other dependencies
     const stackToken = await deployWithNonce("StackToken");
-    const treasury = await deployWithNonce("Treasury", deployer.address);
-    const lendingPool = await deployWithNonce("LendingPool");
+    const stackTokenAddress = await stackToken.getAddress();
+    
+    const treasury = await deployWithNonce("Treasury", deployer.address, stackTokenAddress);
+    const treasuryAddress = await treasury.getAddress();
+    
+    const lendingPool = await deployWithNonce("LendingPool", stackTokenAddress);
+    const lendingPoolAddress = await lendingPool.getAddress();
+    
     const semaphoreMock = await deployWithNonce("SemaphoreMock");
+    const semaphoreMockAddress = await semaphoreMock.getAddress();
+    
     const btcTimestampMock = await deployWithNonce("BtcTimestampMock");
+    const btcTimestampMockAddress = await btcTimestampMock.getAddress();
+    
     const badgeSystem = await deployWithNonce("BadgeSystem", deployer.address);
+    const badgeSystemAddress = await badgeSystem.getAddress();
     
     // 2. Deploy CircleFactory
-    // The deployer is the initial owner, but will transfer ownership to the CircleDeployer
     const circleFactory = await deployWithNonce(
       "CircleFactory",
-      await btcTimestampMock.getAddress(),
-      await badgeSystem.getAddress(),
-      deployer.address // initialOwner
+      btcTimestampMockAddress,
+      badgeSystemAddress,
+      deployer.address
     );
+    const circleFactoryAddress = await circleFactory.getAddress();
 
-    // 3. Deploy the new CircleDeployer contract
-    // This contract will orchestrate the creation of new circles.
+    // 3. Deploy CircleDeployer
     const circleDeployer = await deployWithNonce(
-        "CircleDeployer",
-        await circleFactory.getAddress(),
-        await btcTimestampMock.getAddress(),
-        await treasury.getAddress()
+      "CircleDeployer",
+      circleFactoryAddress,
+      btcTimestampMockAddress,
+      treasuryAddress
     );
+    const circleDeployerAddress = await circleDeployer.getAddress();
 
-    // 4. Set up initial permissions for the factory
-    await sendTxWithNonce(badgeSystem, "setFactory", [await circleFactory.getAddress()]);
-    await sendTxWithNonce(badgeSystem, "transferOwnership", [await circleFactory.getAddress()]);
+    // 4. Set up initial permissions
+    await sendTxWithNonce(badgeSystem, "setFactory", [circleFactoryAddress]);
+    await sendTxWithNonce(badgeSystem, "transferOwnership", [circleFactoryAddress]);
     
-    // 5. CRITICAL STEP: Transfer ownership of the CircleFactory to the CircleDeployer
-    // This gives the deployer contract the permission to call `registerCircle`.
+    // 5. Transfer ownership of CircleFactory
     console.log("🔐 Transferring CircleFactory ownership to CircleDeployer...");
-    await sendTxWithNonce(circleFactory, "transferOwnership", [await circleDeployer.getAddress()]);
+    await sendTxWithNonce(circleFactory, "transferOwnership", [circleDeployerAddress]);
     
-    // 6. Create a test circle using the new, robust CircleDeployer contract
+    // 6. Create test circle
     console.log("\n🚀 Creating test circle via CircleDeployer...");
     const contributionAmount = ethers.parseEther("0.01");
     const period = 604800; // 7 days
 
+    // THE FIX: Add 'false' for the 'isPremium' parameter
     const deployerReceipt = await sendTxWithNonce(
       circleDeployer,
       "deployAndRegisterCircle",
       [
-        "Family Savings",             // name
-        ethers.parseEther("1.0"),     // goal
-        contributionAmount,           // contributionAmount
-        period,                       // contributionPeriod
-        deployer.address              // circleOwner
+        "Family Savings",
+        ethers.parseEther("1.0"),
+        contributionAmount,
+        period,
+        deployer.address,
+        false // Explicitly set the test circle to be non-premium
       ]
     );
 
-    // 7. Parse the event from the transaction receipt to get the new circle's details
+    // 7. Parse event
     const circleCreatedTopic = circleFactory.interface.getEvent("CircleCreated").topicHash;
     const log = deployerReceipt.logs.find(x => x.topics[0] === circleCreatedTopic);
     
     if (!log) {
-      throw new Error("CircleCreated event not found in transaction logs from CircleDeployer");
+      throw new Error("CircleCreated event not found");
     }
     
     const parsedLog = circleFactory.interface.parseLog(log);
     const [circleId, owner, engineAddress, trackerAddress, goal] = parsedLog.args;
     
-    // Fetch the governance address from the newly created circle struct
-    const circleData = await circleFactory.getCircle(circleId);
-    const governanceAddress = circleData.governance;
-
-    console.log("\n✅ Test Circle Registered via Deployer:");
-    console.log("   Circle ID:", circleId.toString());
-    console.log("   Owner:", owner);
-    console.log("   Engine Address:", engineAddress);
-    console.log("   Tracker Address:", trackerAddress);
-    console.log("   Governance Address:", governanceAddress);
-    console.log("   Goal:", ethers.formatEther(goal), "ETH");
-    
-    // 8. Save deployment addresses to config file for frontend and backend use
+    // 8. Save config
     const config = {
       network: "localhost",
-      deployerContractAddress: await circleDeployer.getAddress(), // For the backend .env
-      circleFactory: await circleFactory.getAddress(),
-      badgeSystem: await badgeSystem.getAddress(),
-      btcOracle: await btcTimestampMock.getAddress(),
-      treasury: await treasury.getAddress(),
-      semaphore: await semaphoreMock.getAddress(),
-      stackToken: await stackToken.getAddress(),
-      lendingPool: await lendingPool.getAddress(),
-      testCircle: { // For frontend testing
+      deployerContractAddress: circleDeployerAddress,
+      circleFactory: circleFactoryAddress,
+      badgeSystem: badgeSystemAddress,
+      btcOracle: btcTimestampMockAddress,
+      treasury: treasuryAddress,
+      semaphore: semaphoreMockAddress,
+      stackToken: stackTokenAddress,
+      lendingPool: lendingPoolAddress,
+      testCircle: {
         id: circleId.toString(),
         engine: engineAddress,
         tracker: trackerAddress,
-        governance: governanceAddress
+        governance: (await circleFactory.getCircle(circleId)).governance
       }
     };
     

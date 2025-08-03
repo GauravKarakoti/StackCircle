@@ -8,14 +8,14 @@ contract Treasury {
     using SafeERC20 for IERC20;
     
     address public governance;
-    mapping(address => uint256) public balances;
-
-    constructor(address _governance) {
+    address public stackToken;  // Added StackToken address reference
+    
+    constructor(address _governance, address _stackToken) {
         governance = _governance;
+        stackToken = _stackToken;
     }
 
-    // This receive function allows the contract to accept direct Ether transfers,
-    // such as the protocol fees sent from the ContributionEngine.
+    // This receive function allows the contract to accept direct Ether transfers
     receive() external payable {}
     
     function withdraw(
@@ -27,9 +27,19 @@ contract Treasury {
         IERC20(token).safeTransfer(recipient, amount);
     }
     
+    // Updated to work with ETH and tokens
     function distributeFees() external {
-        uint256 amount = address(this).balance / 10;
-        (bool success,) = governance.call{value: amount}("");
-        require(success, "Transfer failed");
+        require(msg.sender == governance, "Unauthorized");
+        
+        // Distribute ETH fees (10% to governance)
+        uint256 ethAmount = address(this).balance / 10;
+        (bool success,) = governance.call{value: ethAmount}("");
+        require(success, "ETH transfer failed");
+        
+        // Distribute token fees if StackToken is set
+        if (stackToken != address(0)) {
+            uint256 tokenBalance = IERC20(stackToken).balanceOf(address(this));
+            IERC20(stackToken).safeTransfer(governance, tokenBalance);
+        }
     }
 }

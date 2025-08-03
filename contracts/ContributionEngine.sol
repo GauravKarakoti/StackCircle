@@ -6,6 +6,11 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./interfaces/IBtcTimeStamp.sol";
 import "./interfaces/ICircleFactory.sol";
 import "./interfaces/ILendingPool.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+interface IGovernanceToken {
+    function mint(address to, uint256 amount) external;
+}
 
 contract ContributionEngine is Ownable {
     string public name;
@@ -25,7 +30,7 @@ contract ContributionEngine is Ownable {
     
     // DAO integration
     uint256 public constant PROTOCOL_FEE_BPS = 100; // 1%
-    address public governanceToken;
+    IGovernanceToken public governanceToken;
     
     // Stateless client support
     bytes32 public merkleRoot;
@@ -96,7 +101,7 @@ contract ContributionEngine is Ownable {
     }
     
     function setGovernanceToken(address _token) external onlyOwner {
-        governanceToken = _token;
+        governanceToken = IGovernanceToken(_token);
     }
     
     function setMerkleRoot(bytes32 _root) external onlyOwner {
@@ -187,6 +192,11 @@ contract ContributionEngine is Ownable {
             if (!badgeSuccess) {
                 revert("Badge minting failed");
             }
+        }
+
+        if (address(governanceToken) != address(0)) {
+            uint256 tokenReward = contributionAmount * 10; // 10 tokens per 0.01 BTC
+            governanceToken.mint(member, tokenReward);
         }
 
         ICircleFactory(factory).updateCircleTotalContributed(circleId, netContribution);

@@ -19,23 +19,20 @@ export const CitreaProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   // Citrea testnet configuration
-  const FACTORY_ADDRESS = '0xf3d5FA40A7aB6EC0fdaA26C9dB9245AAF22617f7'; 
-  const BTC_ORACLE_ADDRESS = '0xFFE48e98EF520C451538706dbD603532C390aA11'; 
+  const FACTORY_ADDRESS = '0x8b2469db00806f529EEBa01fa2a39B89924CbAec'; 
+  const BTC_ORACLE_ADDRESS = '0x55988c6E027aE2fdD9991083FA3f0DB17EE47F71'; 
   
   // Initialize provider and contracts
   const init = useCallback(async () => {
     if (typeof window === 'undefined' || !window.ethereum) return;
     
     try {
-      // Ethers v6: BrowserProvider instead of providers.Web3Provider
       const web3Provider = new ethers.BrowserProvider(window.ethereum);
       setProvider(web3Provider);
       
-      // Get signer asynchronously
       const signer = await web3Provider.getSigner();
       setSigner(signer);
       
-      // Create contract instances with signer
       const factory = new ethers.Contract(
         FACTORY_ADDRESS,
         [
@@ -58,7 +55,6 @@ export const CitreaProvider = ({ children }) => {
       );
       setBtcOracle(oracle);
       
-      // Get current account if connected
       const accounts = await web3Provider.listAccounts();
       if (accounts.length > 0) {
         setAccount(accounts[0].address);
@@ -69,14 +65,12 @@ export const CitreaProvider = ({ children }) => {
   }, []);
 
   const createProposal = useCallback(async (circleId, proposalData) => {
-    if (!circleFactory) throw new Error("Contract not initialized"); // Changed from contract to circleFactory
+    if (!circleFactory) throw new Error("Contract not initialized");
     
-    // Convert proposal data to contract format
     const { title, description, type, amount, recipient } = proposalData;
     console.log("Creating proposal with data");
     
-    // Execute contract call
-    const tx = await circleFactory.createProposal( // Changed from contract to circleFactory
+    const tx = await circleFactory.createProposal(
       circleId,
       type === 'WITHDRAWAL' ? 0 : type === 'DONATION' ? 1 : 2,
       title,
@@ -103,7 +97,6 @@ export const CitreaProvider = ({ children }) => {
       signer
     );
 
-    // Verify contribution amount matches required
     const requiredAmount = await contributionEngine.contributionAmount();
     if (ethers.parseEther(amount.toString()) !== requiredAmount) {
       throw new Error(`Contribution amount must be exactly ${ethers.formatEther(requiredAmount)} ETH`);
@@ -128,7 +121,6 @@ export const CitreaProvider = ({ children }) => {
     const proposals = await Promise.all(
       proposalIds.map(async (id) => {
         const p = await governanceContract.getProposal(id);
-        // p[1] comes back as a BigInt/BigNumber; convert it to a JS number
         const kind = Number(p[1]);
         let typeLabel;
         switch (kind) {
@@ -163,14 +155,12 @@ export const CitreaProvider = ({ children }) => {
     if (!circleFactory) throw new Error("Contract not initialized");
     
     try {
-      // The logic is now a simple, direct call to the factory contract
       const tx = await circleFactory.inviteMember(circleId, memberAddress);
       await tx.wait();
       
       return tx.hash;
     } catch (error) {
       console.error("Failed to invite member:", error);
-      // This will now pass a more useful error message to the toast notification
       throw error;
     }
   }, [circleFactory, signer]);
@@ -189,7 +179,6 @@ export const CitreaProvider = ({ children }) => {
     return tx.hash;
   }, [provider, signer]);
   
-  // Connect wallet
   const connectWallet = useCallback(async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
       alert('Please install MetaMask to use this application!');
@@ -214,7 +203,6 @@ export const CitreaProvider = ({ children }) => {
     setBtcOracle(null);
     setIsConnected(false);
     
-    // Clear local storage
     if (typeof window !== 'undefined') {
       localStorage.removeItem('walletConnected');
     }
@@ -222,29 +210,27 @@ export const CitreaProvider = ({ children }) => {
 
   const disconnectWallet = useCallback(() => {
     resetWallet();
-    
-    // Notify user
     toast.success('Wallet disconnected');
     
-    // Redirect to home page
     if (typeof window !== 'undefined') {
       window.location.href = '/';
     }
   }, [resetWallet]);
   
-  const createCircle = useCallback(async (name, goal, amount, period) => {
-    if (!account) { // 'account' is the connected user's address
+  // THE FIX: Accept 'isPremium' as a parameter and include it in the API call
+  const createCircle = useCallback(async (name, goal, amount, period, isPremium) => {
+    if (!account) {
       throw new Error('Wallet not connected');
     }
 
     try {
-      // Call your new backend API endpoint
       const response = await axios.post('/api/create-circle', { 
         name,
         goal,
         amount,
         period,
-        circleOwner: account // Pass the user's address to the backend
+        circleOwner: account,
+        isPremium // Include the isPremium flag in the request body
       });
 
       if (response.data.success) {
@@ -255,7 +241,6 @@ export const CitreaProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('API call to create circle failed:', error);
-      // Re-throw the error so the component can catch it
       throw error;
     }
   }, [account]);
@@ -283,8 +268,8 @@ export const CitreaProvider = ({ children }) => {
       }
     } catch (error) {
       const errorMessage = error.response?.data?.error || 
-                          error.message || 
-                          'Network error - please try again';
+                             error.message || 
+                             'Network error - please try again';
       toast.error(errorMessage);
       return false;
     } finally {
@@ -300,7 +285,6 @@ export const CitreaProvider = ({ children }) => {
       
       window.ethereum.on('accountsChanged', handleAccountsChanged);
       
-      // Initialize if already connected
       if (window.ethereum.selectedAddress) {
         init();
       }
@@ -311,7 +295,6 @@ export const CitreaProvider = ({ children }) => {
     }
   }, [init]);
 
-  // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
     provider,
     signer,

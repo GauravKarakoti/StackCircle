@@ -26,8 +26,9 @@ contract CircleDeployer {
         uint256 goal,
         uint256 contributionAmount,
         uint256 contributionPeriod,
-        address circleOwner
-    ) external {
+        address circleOwner,
+        bool isPremium // 1. NEW: Add isPremium parameter
+    ) external payable { // 2. MODIFIED: Make function payable
         // 1. Deploy all component contracts
         ContributionEngine engine = new ContributionEngine(
             string.concat(name, " Engine"),
@@ -43,14 +44,14 @@ contract CircleDeployer {
 
         // 2. Register the circle with the factory
         CircleFactory factory = CircleFactory(factoryAddress);
-        uint256 circleId = factory.registerCircle(
+        uint256 circleId = factory.registerCircle{value: msg.value}( // 3. MODIFIED: Forward the transaction value
             name,
             goal,
             address(engine),
             address(tracker),
             address(governance),
             circleOwner,
-            false
+            isPremium // 4. NEW: Pass isPremium to the factory
         );
 
         // 3. Perform all initialization calls
@@ -59,12 +60,12 @@ contract CircleDeployer {
         engine.addInitialCreator(circleOwner);
         engine.setStreakTracker(address(tracker));
         
-        // --- StreakTracker Setup (THE FIX) ---
+        // --- StreakTracker Setup ---
         tracker.setCircleId(circleId);
         tracker.setEngine(address(engine));
         
         // 4. Transfer ownership of components to the Factory for future management
         engine.transferOwnership(factoryAddress);
-        tracker.transferOwnership(factoryAddress); // NEW: Transfer tracker ownership
+        tracker.transferOwnership(factoryAddress);
     }
 }
