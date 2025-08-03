@@ -260,7 +260,18 @@ export const CitreaProvider = ({ children }) => {
       });
       
       if (response.data.success) {
-        toast.success(response.data.message || 'Test BTC sent to your account!');
+        const message = response.data.message || 'Test BTC sent to your account!';
+        toast.success(message);
+        
+        // NEW: Show alert with transaction details
+        alert(
+          `✅ Test BTC Request Successful!\n\n` +
+          `Amount: 0.1 cBTC\n` +
+          `Recipient: ${account}\n` +
+          `Transaction: ${response.data.txHash}\n\n` +
+          `Please allow a few minutes for the transaction to be confirmed.`
+        );
+        
         return true;
       } else {
         toast.error(response.data.error || 'Failed to request test BTC');
@@ -268,8 +279,8 @@ export const CitreaProvider = ({ children }) => {
       }
     } catch (error) {
       const errorMessage = error.response?.data?.error || 
-                             error.message || 
-                             'Network error - please try again';
+                            error.message || 
+                            'Network error - please try again';
       toast.error(errorMessage);
       return false;
     } finally {
