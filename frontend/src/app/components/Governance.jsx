@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useState, useEffect, useRef } from 'react';
 import { useCitrea } from '../contexts/CitreaContext';
 import toast from 'react-hot-toast';
+import '../globals.css';
 
 const Governance = ({ circleId, governanceAddress, proposals, updateProposals }) => {
   const { createProposal, fetchProposals, voteOnProposal } = useCitrea();
@@ -91,7 +92,7 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
       {proposals.length > 0 ? (
         <div className="space-y-4">
           {proposals.map(proposal => (
-            <div key={proposal.id} className="border border-orange-200 rounded-xl bg-white overflow-hidden p-4 hover:shadow-md transition-shadow">
+            <div key={proposal.id} className="card overflow-hidden mb-6 hover:shadow-lg transition">
               <div className={`p-4 ${
                 proposal.type === 'WITHDRAWAL' ? 'bg-blue-50' : 
                 proposal.type === 'DONATION' ? 'bg-purple-50' : 
@@ -127,16 +128,16 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
                   />
                 </div>
                 
-                <div className="flex justify-between">
+                <div className="grid grid-cols-2 gap-2 mt-4">
                   <button 
                     onClick={() => handleVote(proposal.id, true)}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-l-md"
+                    className="btn-primary py-2"
                   >
                     For ({proposal.votesFor})
                   </button>
                   <button 
                     onClick={() => handleVote(proposal.id, false)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-r-md"
+                    className="btn-primary py-2"
                   >
                     Against ({proposal.votesAgainst})
                   </button>
@@ -158,7 +159,7 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
       )}
       
       {/* Proposal Creation Modal */}
-      <dialog id="proposal-modal" className="rounded-xl shadow-2xl backdrop:bg-black/50 p-0 max-w-md w-full">
+      <dialog id="proposal-modal" className="rounded-2xl shadow-2xl backdrop:bg-black/30 p-0 max-w-md w-full">
         <div className="p-6">
           <h3 className="text-xl font-bold mb-4">Create New Proposal</h3>
           

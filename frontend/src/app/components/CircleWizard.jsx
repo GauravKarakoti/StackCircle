@@ -51,7 +51,7 @@ const CircleWizard = () => {
   };
   
   return (
-    <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
+    <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden p-8">
       {step === 1 && (
         <div className="text-center">
           <button 
@@ -65,10 +65,10 @@ const CircleWizard = () => {
       
       {step === 2 && (
         <form onSubmit={handleSubmit}>
-          <h3 className="text-xl font-semibold mb-4">Circle Details</h3>
+          <h3 className="text-2xl font-bold mb-6 text-orange-700">Circle Details</h3>
           
-          <div className="mb-4">
-            <label htmlFor={inputIds.name} className="block text-gray-700 mb-2">
+          <div className="mb-5">
+            <label htmlFor={inputIds.name} className="input-label">
               Circle Name
             </label>
             <input
@@ -77,7 +77,7 @@ const CircleWizard = () => {
               name="name"
               value={circleData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border rounded"
+              className="input-field"
               required
               disabled={isCreating}
             />
@@ -152,7 +152,7 @@ const CircleWizard = () => {
           
           <button
             type="submit"
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded flex justify-center items-center"
+            className="btn-primary w-full py-3 text-lg flex justify-center items-center"
             disabled={isCreating}
           >
             {isCreating ? (

@@ -10,11 +10,11 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-white">
       <div className="max-w-4xl mx-auto px-4 py-16 sm:py-12">
-        <div className="text-center mb-14">
-          <h1 className="text-5xl font-extrabold text-orange-600 mb-4 drop-shadow-sm">
-            Stack Bitcoin Together
+        <div className="text-center mb-16">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-orange-700 mb-6 drop-shadow-md">
+            Stack Bitcoin <span className="text-amber-600">Together</span>
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl md:text-2xl text-gray-700 max-w-3xl mx-auto">
             Create social savings circles with friends, families, or communities.<br />
             Achieve your financial goals on Bitcoin&apos;s first ZK Rollup.
           </p>
@@ -39,22 +39,22 @@ export default function Home() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-orange-50 rounded-xl p-8 shadow hover:shadow-lg transition flex flex-col items-center">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-8 shadow-lg hover:shadow-xl transition flex flex-col items-center float">
             <div className="mb-3 text-3xl">🎯</div>
             <h3 className="font-bold text-lg mb-2 text-orange-600">1. Create Circle</h3>
             <p className="text-gray-700 text-center">
               Set a savings goal and contribution schedule for your group
             </p>
           </div>
-          <div className="bg-orange-50 rounded-xl p-8 shadow hover:shadow-lg transition flex flex-col items-center">
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-8 shadow-lg hover:shadow-xl transition flex flex-col items-center float">
             <div className="mb-3 text-3xl">🤝</div>
             <h3 className="font-bold text-lg mb-2 text-orange-600">2. Invite Members</h3>
             <p className="text-gray-700 text-center">
               Add friends, family, or community members to your circle
             </p>
           </div>
-          <div className="bg-orange-50 rounded-xl p-8 shadow hover:shadow-lg transition flex flex-col items-center">
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-8 shadow-lg hover:shadow-xl transition flex flex-col items-center float">
             <div className="mb-3 text-3xl">💰</div>
             <h3 className="font-bold text-lg mb-2 text-orange-600">3. Stack Together</h3>
             <p className="text-gray-700 text-center">

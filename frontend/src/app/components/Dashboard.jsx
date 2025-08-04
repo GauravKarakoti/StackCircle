@@ -8,6 +8,7 @@ import * as d3 from 'd3';
 import '../globals.css';
 import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
+import CircleCard from './CircleCard'; 
 
 const Dashboard = () => {
   const [circles, setCircles] = useState([]);
@@ -210,7 +211,7 @@ const Dashboard = () => {
 
   const OverviewTab = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
         <div className="bg-orange-50 rounded-lg p-4">
           <h4 className="font-bold mb-2">Savings Progress</h4>
           <p className="text-3xl font-bold text-orange-600">
@@ -422,88 +423,23 @@ const Dashboard = () => {
   }
   
   return (
-    <div className="max-w-4xl mx-auto">      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {circles.map(circle => (
-          <div key={circle.id} className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-6 border-2 border-orange-100 shadow-md transition-transform hover:scale-[1.02]">
-            <div className="flex justify-between items-start">
-              <h3 className="text-xl font-bold mb-2 text-orange-700">{circle.name}</h3>
-              <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
-                {circle.members} members
-              </div>
-            </div>
-            <div className="relative my-4 w-32 h-32 mx-auto">
-              <svg className="w-full h-full" viewBox="0 0 100 100">
-                <circle 
-                  className="text-orange-100 stroke-current" 
-                  strokeWidth="8" 
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  fill="transparent" 
-                />
-                <circle 
-                  className="text-orange-500  stroke-current" 
-                  strokeWidth="8" 
-                  strokeLinecap="round"
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  fill="transparent" 
-                  strokeDasharray="251.2"
-                  strokeDashoffset={251.2 * (1 - circle.saved/circle.goal)}
-                  transform="rotate(-90 50 50)"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold">
-                  {Math.round((circle.saved/circle.goal)*100)}%
-                </span>
-                <span className="text-xs text-gray-500">Progress</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between mt-4">
-              <div>
-                <p className="text-gray-600 text-sm">Goal</p>
-                <p className="font-medium">{circle.goal} BTC</p>
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Saved</p>
-                <p className="font-medium">{circle.saved} BTC</p>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <div>
-                <span className="text-sm text-gray-600">Your Streak</span>
-                <StreakVisual streak={circle.streak} />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <h4 className="text-sm font-medium text-gray-600 mb-1">Your Badges</h4>
-              <div className="flex space-x-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center">
-                  <span className="text-white text-xs">🔥</span>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center">
-                  <span className="text-white text-xs">🏛️</span>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-400 text-xs">⭐</span>
-                </div>
-              </div>
-            </div>
-            
-            <button 
-              onClick={() => setActiveCircle(circle)}
-              className="mt-4 w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white py-2 rounded-lg shadow-md transition-all"
-            >
-              View Circle Details
-            </button>
-          </div>
-        ))}
-      </div>
+    <div className="max-w-6xl mx-auto">      
+      {circles.length === 0 ? (
+        <div className="text-center py-12 card-gradient">
+          <h3 className="text-xl font-semibold text-orange-800">No Circles Found</h3>
+          <p className="text-orange-600 mt-2">You haven't joined or created any stacking circles yet.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {circles.map(circle => (
+            <CircleCard 
+              key={circle.id} 
+              circle={circle} 
+              onViewDetails={setActiveCircle} 
+            />
+          ))}
+        </div>
+      )}
       
       {activeCircle && (
         <div className="bg-opacity-50 fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">

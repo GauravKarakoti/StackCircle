@@ -29,14 +29,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white pt-4 pb-16">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-orange-600">My Stacking Circles</h1>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold text-orange-700 mb-4 md:mb-0">My Stacking Circles</h1>
           <button 
             onClick={() => router.push('/')}
-            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded"
+            className="flex justify-center btn-primary px-6 py-3 text-lg"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
             Create New Circle
           </button>
         </div>

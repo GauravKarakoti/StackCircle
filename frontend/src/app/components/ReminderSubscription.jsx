@@ -1,7 +1,8 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useCitrea } from '../contexts/CitreaContext';
+import '../globals.css';
 
 const ReminderSubscription = ({ circleId }) => {
   const { account } = useCitrea();
@@ -113,7 +114,7 @@ const ReminderSubscription = ({ circleId }) => {
   };
 
   return (
-    <div className="mt-6 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl p-6 border border-orange-200">
+    <div className="card-gradient mt-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div className="mb-4 md:mb-0">
           <h4 className="font-bold text-lg">Contribution Reminders</h4>
@@ -180,18 +181,18 @@ const ReminderSubscription = ({ circleId }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center">
               <label className="flex items-center cursor-pointer">
-                <div className="relative">
+                <div className="relative inline-block w-12 h-6">
                   <input 
                     type="checkbox" 
                     className="sr-only" 
                     checked={reminderSettings.contribution}
                     onChange={() => handleSettingChange('contribution')}
                   />
-                  <div className={`block w-10 h-6 rounded-full ${
+                  <div className={`block w-12 h-6 rounded-full transition ${
                     reminderSettings.contribution ? 'bg-orange-500' : 'bg-gray-300'
                   }`}></div>
                   <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${
-                    reminderSettings.contribution ? 'transform translate-x-4' : ''
+                    reminderSettings.contribution ? 'transform translate-x-6' : ''
                   }`}></div>
                 </div>
                 <span className="ml-3 text-gray-700">Contribution Deadlines</span>
@@ -200,18 +201,18 @@ const ReminderSubscription = ({ circleId }) => {
             
             <div className="flex items-center">
               <label className="flex items-center cursor-pointer">
-                <div className="relative">
+                <div className="relative inline-block w-12 h-6">
                   <input 
                     type="checkbox" 
                     className="sr-only" 
                     checked={reminderSettings.proposal}
                     onChange={() => handleSettingChange('proposal')}
                   />
-                  <div className={`block w-10 h-6 rounded-full ${
+                  <div className={`block w-12 h-6 rounded-full transition ${
                     reminderSettings.proposal ? 'bg-orange-500' : 'bg-gray-300'
                   }`}></div>
                   <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${
-                    reminderSettings.proposal ? 'transform translate-x-4' : ''
+                    reminderSettings.proposal ? 'transform translate-x-6' : ''
                   }`}></div>
                 </div>
                 <span className="ml-3 text-gray-700">Voting Deadlines</span>
@@ -220,18 +221,18 @@ const ReminderSubscription = ({ circleId }) => {
             
             <div className="flex items-center">
               <label className="flex items-center cursor-pointer">
-                <div className="relative">
+                <div className="relative inline-block w-12 h-6">
                   <input 
                     type="checkbox" 
                     className="sr-only" 
                     checked={reminderSettings.streak}
                     onChange={() => handleSettingChange('streak')}
                   />
-                  <div className={`block w-10 h-6 rounded-full ${
+                  <div className={`block w-12 h-6 rounded-full transition ${
                     reminderSettings.streak ? 'bg-orange-500' : 'bg-gray-300'
                   }`}></div>
                   <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${
-                    reminderSettings.streak ? 'transform translate-x-4' : ''
+                    reminderSettings.streak ? 'transform translate-x-6' : ''
                   }`}></div>
                 </div>
                 <span className="ml-3 text-gray-700">Streak Milestones</span>

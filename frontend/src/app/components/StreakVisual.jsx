@@ -18,7 +18,7 @@ const StreakVisual = ({ streak }) => {
         {dotKeys.map((key, index) => (
           <div 
             key={key}
-            className={`w-3 h-3 rounded-full mx-1 ${index < streak ? 'bg-orange-500' : 'bg-gray-300'}`}
+            className={`w-4 h-4 rounded-full mx-1 transition-all ${index < streak ? 'bg-gradient-to-r from-orange-500 to-amber-500 pulse' : 'bg-gray-300'}`}
           />
         ))}
       </div>

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import '../globals.css';
 
 const BadgeDisplay = ({ badges }) => {
   const badgeData = [
@@ -8,22 +9,22 @@ const BadgeDisplay = ({ badges }) => {
   ];
 
   return (
-    <div className="mt-6">
-      <h3 className="text-xl font-semibold mb-4">Your Badges</h3>
+    <div className="mt-8">
+      <h3 className="text-2xl font-bold mb-6 text-orange-700">Your Badges</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {badgeData.map(badge => (
           <div 
             key={badge.id} 
-            className={`rounded-xl p-4 flex flex-col items-center text-center transition-all duration-300 ${
+            className={`rounded-2xl p-5 flex flex-col items-center text-center transition-all duration-300 ${
               badges.includes(badge.id) 
-                ? 'bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-200 shadow-md' 
-                : 'bg-gray-50 border-2 border-gray-100 opacity-75'
+                ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 shadow-lg' 
+                : 'bg-gray-50 border-2 border-gray-200 opacity-80'
             }`}
           >
             <div 
-              className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl mb-3 ${
+              className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-4 shadow-inner ${
                 badges.includes(badge.id) 
-                  ? 'bg-gradient-to-r from-orange-400 to-yellow-400 text-white' 
+                  ? 'bg-gradient-to-br from-orange-400 to-amber-400 text-white' 
                   : 'bg-gray-200 text-gray-400'
               }`}
             >

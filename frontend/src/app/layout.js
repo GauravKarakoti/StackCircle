@@ -22,10 +22,10 @@ export default function RootLayout({ children }) {
             </main>
             
             {/* Footer */}
-            <footer className="bg-orange-50 py-8 text-center text-gray-600 border-t border-orange-100 mt-8">
+            <footer className="bg-gradient-to-r from-orange-50 to-amber-50 py-10 text-center text-gray-600 border-t border-orange-200 mt-12">
               <div className="max-w-6xl mx-auto px-4">
-                <p className="mb-3 font-semibold text-orange-600">Built on Citrea — Bitcoin&apos;s First ZK Rollup</p>
-                <div className="flex justify-center space-x-8 mb-4">
+                <p className="mb-4 font-bold text-orange-600 text-lg">Built on Citrea — Bitcoin&apos;s First ZK Rollup</p>
+                <div className="flex flex-wrap justify-center space-x-8 gap-6 mb-6">
                   <a href="https://docs.citrea.xyz" target="_blank" rel="noopener noreferrer" className="hover:text-orange-700 hover:underline flex items-center space-x-1">
                     <span>📄</span><span>Documentation</span>
                   </a>
@@ -36,7 +36,15 @@ export default function RootLayout({ children }) {
                     <span>💬</span><span>Support</span>
                   </a>
                 </div>
-                <p className="text-xs text-gray-400">© {new Date().getFullYear()} StackCircle. All rights reserved.</p>
+                <div className="flex justify-center space-x-4 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
+                    <span className="text-white font-bold">C</span>
+                  </div>
+                  <div className="text-sm text-gray-500 flex items-center">
+                    Powered by Citrea Chain
+                  </div>
+                </div>
+                <p className="text-sm text-gray-400">© {new Date().getFullYear()} StackCircle. All rights reserved.</p>
               </div>
             </footer>
           </CitreaProvider>
