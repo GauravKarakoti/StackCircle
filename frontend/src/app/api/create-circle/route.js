@@ -40,6 +40,12 @@ export async function POST(req) {
     const status = error.response?.status || 500;
     const message = error.response?.data?.error || 'Failed to connect to backend service.';
     
+    if (message?.includes('insufficient funds')) {
+      return new Response(JSON.stringify({ 
+        error: 'Insufficient funds for premium circle' 
+      }), { status: 402 });
+    }
+
     console.error(`🔥 Error proxying to backend (Status: ${status}):`, message);
 
     return new Response(JSON.stringify({ error: message }), {

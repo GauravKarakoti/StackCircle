@@ -23,7 +23,9 @@ contract CircleGovernance is Ownable {
     uint256 public proposalCount;
     mapping(uint256 => Proposal) public proposals;
     uint256 public votingPeriod = 3 days;
+    uint256 public constant EXECUTION_DELAY = 1 days;
     address public factory;
+    bool private initialized;
     
     event ProposalCreated(uint256 id, ProposalType pType, string title);
     event Voted(uint256 indexed proposalId, address indexed voter, bool support);
@@ -52,6 +54,13 @@ contract CircleGovernance is Ownable {
         p.deadline = block.timestamp + votingPeriod;
         
         emit ProposalCreated(proposalCount, pType, title);
+    }
+
+    function initialize(address initialOwner, address factoryAddress) external {
+        require(!initialized, "Already initialized");
+        _transferOwnership(initialOwner);
+        factory = factoryAddress;
+        initialized = true;
     }
 
     function getProposal(uint256 id) external view returns (
@@ -98,6 +107,7 @@ contract CircleGovernance is Ownable {
     function executeProposal(uint256 proposalId) external onlyOwner {
         Proposal storage p = proposals[proposalId];
         require(block.timestamp > p.deadline, "Voting ongoing");
+        require(block.timestamp > p.deadline + EXECUTION_DELAY, "Timelock active");
         require(!p.executed, "Already executed");
         
         p.executed = true;

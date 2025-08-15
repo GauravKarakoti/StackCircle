@@ -38,6 +38,12 @@ export default function WalletSection() {
     };
   }, [showDisconnect]);
 
+  useEffect(() => {
+    if (window.ethereum?.selectedAddress) {
+      connectWallet();
+    }
+  }, []);
+
   return (
     <div className="wallet-section flex items-center space-x-4">
       {account ? (

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./CircleFactory.sol";
 import "./ContributionEngine.sol";
 import "./CircleGovernance.sol";
 import "./StreakTracker.sol";
 
-contract CircleDeployer {
+// MODIFIED: Inherit from Ownable to secure the contract
+contract CircleDeployer is Ownable {
     address public immutable factoryAddress;
     address public immutable btcOracleAddress;
     address public immutable treasuryAddress;
@@ -15,7 +17,7 @@ contract CircleDeployer {
         address _factoryAddress,
         address _btcOracleAddress,
         address _treasuryAddress
-    ) {
+    ) Ownable(msg.sender) { // MODIFIED: Set the deployer as the owner
         factoryAddress = _factoryAddress;
         btcOracleAddress = _btcOracleAddress;
         treasuryAddress = _treasuryAddress;
@@ -27,8 +29,8 @@ contract CircleDeployer {
         uint256 contributionAmount,
         uint256 contributionPeriod,
         address circleOwner,
-        bool isPremium // 1. NEW: Add isPremium parameter
-    ) external payable { // 2. MODIFIED: Make function payable
+        bool isPremium
+    ) external payable onlyOwner {
         // 1. Deploy all component contracts
         ContributionEngine engine = new ContributionEngine(
             string.concat(name, " Engine"),
@@ -43,15 +45,14 @@ contract CircleDeployer {
         StreakTracker tracker = new StreakTracker();
 
         // 2. Register the circle with the factory
-        CircleFactory factory = CircleFactory(factoryAddress);
-        uint256 circleId = factory.registerCircle{value: msg.value}( // 3. MODIFIED: Forward the transaction value
+        uint256 circleId = CircleFactory(factoryAddress).registerCircle{value: msg.value}(
             name,
             goal,
             address(engine),
             address(tracker),
             address(governance),
             circleOwner,
-            isPremium // 4. NEW: Pass isPremium to the factory
+            isPremium
         );
 
         // 3. Perform all initialization calls
@@ -64,8 +65,10 @@ contract CircleDeployer {
         tracker.setCircleId(circleId);
         tracker.setEngine(address(engine));
         
-        // 4. Transfer ownership of components to the Factory for future management
+        // 4. Transfer ownership of components for future management
         engine.transferOwnership(factoryAddress);
         tracker.transferOwnership(factoryAddress);
+        
+        governance.initialize(circleOwner, factoryAddress);
     }
 }

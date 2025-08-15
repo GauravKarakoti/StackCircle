@@ -7,12 +7,13 @@ import "./interfaces/IBtcTimeStamp.sol";
 import "./interfaces/ICircleFactory.sol";
 import "./interfaces/ILendingPool.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IGovernanceToken {
     function mint(address to, uint256 amount) external;
 }
 
-contract ContributionEngine is Ownable {
+contract ContributionEngine is Ownable, ReentrancyGuard {
     string public name;
     uint256 public contributionAmount;
     uint256 public contributionPeriod;
@@ -124,7 +125,7 @@ contract ContributionEngine is Ownable {
     }
 
     // Main contribution function with protocol fee
-    function contribute() external payable {
+    function contribute() external payable nonReentrant {
         _processContribution(msg.sender);
     }
     

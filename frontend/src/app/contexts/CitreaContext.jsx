@@ -19,8 +19,8 @@ export const CitreaProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   // Citrea testnet configuration
-  const FACTORY_ADDRESS = '0x8b2469db00806f529EEBa01fa2a39B89924CbAec'; 
-  const BTC_ORACLE_ADDRESS = '0x55988c6E027aE2fdD9991083FA3f0DB17EE47F71'; 
+  const FACTORY_ADDRESS = '0x1a491CA3B54b10e81069A342dE085122DFe03375'; 
+  const BTC_ORACLE_ADDRESS = '0xaCeEA34025dD29B62E7ca1a7daf25fe6e9eCbA46'; 
   
   // Initialize provider and contracts
   const init = useCallback(async () => {

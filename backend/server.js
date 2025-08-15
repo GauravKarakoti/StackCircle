@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 5001;
 
 // UPDATED: We only need the Deployer's address now from the env
 const { OWNER_PRIVATE_KEY, CITREA_RPC_URL } = process.env;
-const DEPLOYER_CONTRACT_ADDRESS='0xf0815405044c5b0237992203B95CAD0b0C67dFBE';
+const DEPLOYER_CONTRACT_ADDRESS='0xB38dC6a6B849fc745FE9eE961064DAf9213A77cd';
 
 if (!OWNER_PRIVATE_KEY || !CITREA_RPC_URL || !DEPLOYER_CONTRACT_ADDRESS) {
   console.error("🔥 Missing required environment variables. Check for DEPLOYER_CONTRACT_ADDRESS.");
@@ -41,6 +41,13 @@ app.post('/api/create-circle', async (req, res) => {
 
     if (!name || !goal || !amount || !period || !circleOwner) {
       return res.status(400).json({ success: false, error: 'Missing required parameters.' });
+    }
+
+    if (isPremium) {
+      const requiredFee = ethers.parseEther("0.01");
+      if (req.body.amount <= requiredFee) {
+        return res.status(400).json({ error: 'Insufficient premium fee' });
+      }
     }
 
     try {

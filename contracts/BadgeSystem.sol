@@ -9,6 +9,7 @@ import "./interfaces/ICircleFactory.sol";
 // that breaks the circular dependency with CircleFactory.
 contract BadgeSystem is ERC1155, Ownable {
     ICircleFactory public factory;
+    bool private initialized;
     
     // Badge types: 1 = Streak, 2 = Contribution, 3 = Governance
     mapping(uint256 => string) public badgeURIs;
@@ -25,6 +26,12 @@ contract BadgeSystem is ERC1155, Ownable {
         badgeURIs[1] = "https://stackcircle.com/badges/streak.json";
         badgeURIs[2] = "https://stackcircle.com/badges/contributor.json";
         badgeURIs[3] = "https://stackcircle.com/badges/governor.json";
+    }
+
+    function initialize(address _factory) external onlyOwner {
+        require(!initialized, "Already initialized");
+        factory = ICircleFactory(_factory);
+        initialized = true;
     }
 
     // New function to set the factory address, callable only by the owner.
