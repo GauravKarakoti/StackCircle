@@ -49,7 +49,7 @@ export default function Home() {
           </div>
           <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-8 shadow-lg hover:shadow-xl transition flex flex-col items-center float">
             <div className="mb-3 text-3xl">🤝</div>
-            <h3 className="font-bold text-lg mb-2 text-orange-600">2. Invite Members</h3>
+            <h3 className="font-bold text-lg mb-2 text-orange-600">2. add Members</h3>
             <p className="text-gray-700 text-center">
               Add friends, family, or community members to your circle
             </p>

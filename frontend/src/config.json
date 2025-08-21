@@ -1,17 +1,17 @@
 {
-  "network": "localhost",
-  "deployerContractAddress": "0xB38dC6a6B849fc745FE9eE961064DAf9213A77cd",
-  "circleFactory": "0x1a491CA3B54b10e81069A342dE085122DFe03375",
-  "badgeSystem": "0x91C936c06e2D862b1F7c692473B5B471504246C8",
-  "btcOracle": "0xaCeEA34025dD29B62E7ca1a7daf25fe6e9eCbA46",
-  "treasury": "0x51c94eE61Acc70B490367F8Cd58Abb84fd0E01C8",
-  "semaphore": "0x4d5D6E647d976a29Ddd3eac96b8fEe7d1A0aa941",
-  "stackToken": "0x146913323608f435B6427c46c6bc02dA87c3ac70",
-  "lendingPool": "0xb8A4c96aA6626A9A98FE0EFb46DEb6A65419981D",
+  "network": "citrea",
+  "deployerContractAddress": "0xD269544B798781C53DBba3C43cF1038E66A4cd7D",
+  "circleFactory": "0x55459A91d6EBaBDf9ebab8BA418bc8c34A553445",
+  "badgeSystem": "0x9c7Dc71187A5005619c58E63C267e1B6D2B7C5d4",
+  "btcOracle": "0x9243c3AaD6699df1D5b962876B2183e2413C096c",
+  "treasury": "0x682B19d2FFb7dc60AD8424E23647724708c4FbBC",
+  "semaphore": "0xf1aad8c5cBbd2119F567479EA98421AB71ACB39a",
+  "stackToken": "0xF267E199158844722699758eB346b5BaE537aFA1",
+  "lendingPool": "0xf699ac81d3924c1Ba3aBDA4c1FC2ba0589651005",
   "testCircle": {
     "id": "1",
-    "engine": "0x2B0649d21e959237a08215a75bC0987F72EEA8AC",
-    "tracker": "0x547A3c16C760546D1154369131aF082d40ec225d",
-    "governance": "0xd50dfD6aD12ae5f2b78C385933c1578c81019823"
+    "engine": "0xE925a5751401355dbB32561FB7789b7a8a5B0DaC",
+    "tracker": "0x4c0F8B4C16053Af645Aa390F25e62fF09aDfA517",
+    "governance": "0x89d0f76477Ac13D4bf5f1269F22D0E5F482f7334"
   }
 }

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import StreakVisual from './StreakVisual'; // 1. Imported the component
 
 const CircleCard = ({ circle, onViewDetails }) => {
+  console.log('CircleCard rendered with circle:', circle);
 
   // Memoize the progress percentage to prevent flickering
   const progressPercentage = useMemo(() => {
@@ -26,7 +27,7 @@ const CircleCard = ({ circle, onViewDetails }) => {
         <div className="flex justify-between items-start">
           <h3 className="text-xl font-bold mb-2 text-orange-700">{circle.name}</h3>
           <div className="badge badge-primary">
-            {Number(circle.members)} members
+            {Number(circle.memberCount)-1} members
           </div>
         </div>
         <div className="relative progress-ring my-4">

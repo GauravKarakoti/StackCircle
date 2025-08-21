@@ -6,13 +6,18 @@ interface ICircleFactory {
         address engine;
         address tracker;
         address governance;
+        string name;
         uint256 goal;
         uint256 created;
+        uint256 memberCount;
+        uint256 longestStreak;
+        uint256 totalContributed;
     }
 
     function circleExists(uint256 circleId) external view returns (bool);
     function getCircle(uint256 circleId) external view returns (Circle memory);
-    // Add the missing function declaration below
     function addMemberToCircle(uint256 circleId, address member) external;
     function updateCircleTotalContributed(uint256 circleId, uint256 amount) external;
+    
+    function isCircleMember(uint256 circleId, address member) external view returns (bool);
 }

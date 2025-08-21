@@ -47,9 +47,10 @@ contract StreakTracker is Ownable {
         factory = ContributionEngine(engine).factory();
     }
     
-    function recordContribution(address member) external {
+    function recordContribution(address member) external returns (uint256 newStreak) {
         require(msg.sender == engine, "Unauthorized");
         _updateStreak(member);
+        return streaks[member].current;
     }
     
     function updateStreakAnonymously(

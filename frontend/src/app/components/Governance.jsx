@@ -1,14 +1,12 @@
 import PropTypes from 'prop-types';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useCitrea } from '../contexts/CitreaContext';
 import toast from 'react-hot-toast';
 import '../globals.css';
 
 const Governance = ({ circleId, governanceAddress, proposals, updateProposals }) => {
   const { createProposal, fetchProposals, voteOnProposal } = useCitrea();
-  const [votingProposal, setVotingProposal] = useState(null);
   const [isVoting, setIsVoting] = useState(false);
-  const [userVotes, setUserVotes] = useState({});
   const [newProposal, setNewProposal] = useState({
     title: '',
     description: '',
@@ -20,29 +18,18 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
   // Create ref for vote modal
   const voteModalRef = useRef(null);
 
-  const checkUserVotes = async (proposals) => {    
-    const votes = {};
-    for (const proposal of proposals) {
-      votes[proposal.id] = false; 
-    }
-    setUserVotes(votes);
-  };
-
-  useEffect(() => {
-    if (proposals.length > 0) {
-      checkUserVotes(proposals);
-    }
-  }, [proposals]);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewProposal(prev => ({ ...prev, [name]: value }));
   };
 
   const refetchProposals = async () => {
-    const proposalIds = proposals.map(p => p.id);
-    const updated = await fetchProposals(governanceAddress, proposalIds);
-    updateProposals(circleId, updated);
+    // Only refetch proposals if there are proposals to refetch
+    if (proposals.length > 0) {
+      const proposalIds = proposals.map(p => p.id);
+      const updated = await fetchProposals(governanceAddress, proposalIds);
+      updateProposals(circleId, updated);
+    }
   };
 
   const handleVote = async (id, support) => {    
@@ -52,11 +39,8 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
       await refetchProposals();
       toast.success(`Voted ${support ? 'FOR' : 'AGAINST'} proposal!`);
       
-      // Close the modal explicitly
-      if (voteModalRef.current) {
-        voteModalRef.current.close();
-      }
-      setVotingProposal(null);
+      // The modal closing logic is no longer necessary as the vote button is not in a modal.
+      
     } catch (error) {
       toast.error(`Vote failed: ${error.message}`);
     } finally {
@@ -127,17 +111,19 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
                     }}
                   />
                 </div>
-                
+                {console.log(proposal, "votes:", proposal.votesFor, proposal.votesAgainst)}
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   <button 
                     onClick={() => handleVote(proposal.id, true)}
                     className="btn-primary py-2"
+                    disabled={isVoting}
                   >
                     For ({proposal.votesFor})
                   </button>
                   <button 
                     onClick={() => handleVote(proposal.id, false)}
                     className="btn-primary py-2"
+                    disabled={isVoting}
                   >
                     Against ({proposal.votesAgainst})
                   </button>

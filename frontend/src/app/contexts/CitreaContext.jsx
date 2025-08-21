@@ -19,8 +19,8 @@ export const CitreaProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   // Citrea testnet configuration
-  const FACTORY_ADDRESS = '0x1a491CA3B54b10e81069A342dE085122DFe03375'; 
-  const BTC_ORACLE_ADDRESS = '0xaCeEA34025dD29B62E7ca1a7daf25fe6e9eCbA46'; 
+  const FACTORY_ADDRESS = '0x55459A91d6EBaBDf9ebab8BA418bc8c34A553445'; 
+  const BTC_ORACLE_ADDRESS = '0x9243c3AaD6699df1D5b962876B2183e2413C096c'; 
   
   // Initialize provider and contracts
   const init = useCallback(async () => {
@@ -42,7 +42,7 @@ export const CitreaProvider = ({ children }) => {
           'function circleExists(uint256) returns (bool)',
           'function getCircle(uint256) returns ((address,address,address,string,uint256,uint256,uint256,uint256,uint256))',
           'function createProposal(uint256, uint8, string ,string ,uint256, address)',
-          'function inviteMember(uint256, address)'
+          'function addMember(uint256, address)'
         ],
         signer
       );
@@ -66,45 +66,89 @@ export const CitreaProvider = ({ children }) => {
 
   const createProposal = useCallback(async (circleId, proposalData) => {
     if (!circleFactory) throw new Error("Contract not initialized");
-    
+    console.log("Creating proposal for circle:", circleId, "with data:", proposalData);
     const { title, description, type, amount, recipient } = proposalData;
-    console.log("Creating proposal with data");
     
-    const tx = await circleFactory.createProposal(
-      circleId,
-      type === 'WITHDRAWAL' ? 0 : type === 'DONATION' ? 1 : 2,
-      title,
-      description,
-      ethers.parseEther(amount.toString()),
-      recipient
+    const circleCalldata = circleFactory.interface.encodeFunctionData(
+      'getCircle',
+      [ circleId ]
     );
-    console.log("Creating proposal transaction:", tx);
-    
-    await tx.wait();
-    console.log("Proposal created successfully:", tx.hash);
-    return tx.hash;
-  }, [circleFactory]);
+    console.log(`Fetching circle ${circleId} with calldata:`, circleCalldata);
 
-  const contributeToCircle = useCallback(async (engineAddress, amount) => {
+    const rawCircle = await provider.call({
+      to: circleFactory.target,
+      data: circleCalldata
+    });
+    console.log(`Raw circle data for ${circleId}:`, rawCircle);
+
+    const fn = circleFactory.interface.getFunction('getCircle(uint256)');
+    const tuple = circleFactory.interface.decodeFunctionResult(fn, rawCircle);
+    const circleInfo = tuple[0];
+    console.log(`Circle ${circleId} data:`, circleInfo);
+    const governanceAddress = await circleInfo[2];
+    console.log("Governance address for circle:", governanceAddress);
+
+    // Use the correct ABI for the governance contract.
+    const governanceAbi = [
+      "function createProposal(uint8, string, string, uint256, address)"
+    ];
+    const governanceContract = new ethers.Contract(governanceAddress, governanceAbi, signer);
+
+    let proposalType;
+    switch (type) {
+      case 'WITHDRAWAL':
+          proposalType = 0;
+          break;
+      case 'DONATION':
+          proposalType = 1;
+          break;
+      case 'PARAM_CHANGE':
+          proposalType = 2;
+          break;
+      default:
+          throw new Error("Invalid proposal type");
+    }
+
+    try {
+      console.log("Creating proposal with data");
+      const tx = await governanceContract.createProposal(
+          proposalType,
+          title,
+          description,
+          ethers.parseEther(amount.toString()),
+          recipient
+      );
+
+      console.log("Creating proposal transaction:", tx);
+      await tx.wait();
+      console.log("Proposal created successfully:", tx.hash);
+      return tx.hash;
+    } catch (error) {
+      console.error("Failed to create proposal:", error);
+      throw error;
+    }
+  }, [circleFactory, signer]);
+
+  const contributeToCircle = useCallback(async (engineAddress) => {
     if (!signer) throw new Error("No signer available");
     
     const contributionEngine = new ethers.Contract(
-      engineAddress,
-      [
-        "function contribute() payable",
-        "function contributionAmount() view returns (uint256)"
-      ],
-      signer
+        engineAddress,
+        [
+            "function contribute() payable",
+            "function contributionAmount() view returns (uint256)"
+        ],
+        signer
     );
 
+    // Fetch the required contribution amount directly from the contract
     const requiredAmount = await contributionEngine.contributionAmount();
-    if (ethers.parseEther(amount.toString()) !== requiredAmount) {
-      throw new Error(`Contribution amount must be exactly ${ethers.formatEther(requiredAmount)} ETH`);
-    }
-
+    
+    // Call the contribute function, sending the required amount as value
     const tx = await contributionEngine.contribute({ 
-      value: ethers.parseEther(amount.toString())
+        value: requiredAmount // Use the value directly from the contract
     });
+    
     await tx.wait();
     
     return tx.hash;
@@ -113,13 +157,15 @@ export const CitreaProvider = ({ children }) => {
   const fetchProposals = useCallback(async (governanceAddress, proposalIds) => {
     if (!provider) return [];
 
+    // FIX: Updated ABI to include the new 'proposer' field
     const governanceAbi = [
-      "function getProposal(uint256) view returns (uint256, uint8, string, string, uint256, address, uint256, uint256, uint256, bool)"
+      "function getProposal(uint256) view returns (uint256, uint8, string, string, uint256, address, address, uint256, uint256, uint256, bool)"
     ];
     const governanceContract = new ethers.Contract(governanceAddress, governanceAbi, provider);
     
     const proposals = await Promise.all(
       proposalIds.map(async (id) => {
+        // FIX: The decoded values will be at new indices
         const p = await governanceContract.getProposal(id);
         const kind = Number(p[1]);
         let typeLabel;
@@ -141,26 +187,27 @@ export const CitreaProvider = ({ children }) => {
           description: p[3],
           amount: Number(ethers.formatEther(p[4])),
           recipient: p[5],
-          deadline: Number(p[6]),
-          votesFor: Number(p[7]),
-          votesAgainst: Number(p[8]),
-          executed: p[9]
+          proposer: p[6], // New field
+          deadline: Number(p[7]),
+          votesFor: Number(p[8]), // Votes for is now at index 8
+          votesAgainst: Number(p[9]), // Votes against is now at index 9
+          executed: p[10] // Executed is now at index 10
         };
       })
     );
     return proposals;
   }, [provider]);
 
-  const inviteMember = useCallback(async (circleId, memberAddress) => {
+  const addMember = useCallback(async (circleId, memberAddress) => {
     if (!circleFactory) throw new Error("Contract not initialized");
     
     try {
-      const tx = await circleFactory.inviteMember(circleId, memberAddress);
+      const tx = await circleFactory.addMember(circleId, memberAddress);
       await tx.wait();
       
       return tx.hash;
     } catch (error) {
-      console.error("Failed to invite member:", error);
+      console.error("Failed to add member:", error);
       throw error;
     }
   }, [circleFactory, signer]);
@@ -217,27 +264,26 @@ export const CitreaProvider = ({ children }) => {
     }
   }, [resetWallet]);
   
-  // THE FIX: Accept 'isPremium' as a parameter and include it in the API call
   const createCircle = useCallback(async (name, goal, amount, period, isPremium) => {
     if (!account) {
-      throw new Error('Wallet not connected');
+        throw new Error('Wallet not connected');
     }
 
     try {
-      const response = await axios.post('/api/create-circle', { 
-        name,
-        goal,
-        amount,
-        period,
-        circleOwner: account,
-        isPremium // Include the isPremium flag in the request body
+      const response = await axios.post('/api/create-circle', {
+          name,
+          goal,
+          amount,
+          period,
+          circleOwner: account,
+          isPremium // Pass the isPremium flag
       });
 
       if (response.data.success) {
-        toast.success(response.data.message);
-        return response.data.txHash;
+          toast.success(response.data.message);
+          return response.data.txHash;
       } else {
-        throw new Error(response.data.error || 'Failed to create circle.');
+          throw new Error(response.data.error || 'Failed to create circle.');
       }
     } catch (error) {
       console.error('API call to create circle failed:', error);
@@ -318,11 +364,11 @@ export const CitreaProvider = ({ children }) => {
     fetchProposals,
     voteOnProposal,
     contributeToCircle,
-    inviteMember,
+    addMember,
     isRequesting,
     contract: circleFactory,
     btcOracle
-  }), [provider, signer, account, connectWallet, createCircle, requestTestnetBTC, isRequesting, disconnectWallet, createProposal, fetchProposals, voteOnProposal, inviteMember, contributeToCircle, circleFactory, btcOracle]);
+  }), [provider, signer, account, connectWallet, createCircle, requestTestnetBTC, isRequesting, disconnectWallet, createProposal, fetchProposals, voteOnProposal, addMember, contributeToCircle, circleFactory, btcOracle]);
 
   return (
     <CitreaContext.Provider value={contextValue}>

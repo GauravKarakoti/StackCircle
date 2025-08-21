@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useCitrea } from '../contexts/CitreaContext';
-import '../globals.css';
 
 const ReminderSubscription = ({ circleId }) => {
   const { account } = useCitrea();
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [email, setEmail] = useState('');
   const [reminderSettings, setReminderSettings] = useState({
     contribution: true,
     proposal: true,
@@ -14,39 +14,49 @@ const ReminderSubscription = ({ circleId }) => {
     frequency: 'daily'
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load settings from localStorage on component mount
+  // Fetch subscription status and settings from the backend on mount
   useEffect(() => {
-    const savedSettings = localStorage.getItem('reminderSettings');
-    const savedSubscription = localStorage.getItem('isSubscribed');
-    
-    if (savedSettings) {
-      setReminderSettings(JSON.parse(savedSettings));
-    }
-    
-    if (savedSubscription) {
-      setIsSubscribed(savedSubscription === 'true');
-    }
-  }, []);
+    if (!account || !circleId) return;
 
-  // Save settings to localStorage whenever they change
-  useEffect(() => {
-    if (isSubscribed) {
-      localStorage.setItem('reminderSettings', JSON.stringify(reminderSettings));
-      localStorage.setItem('isSubscribed', 'true');
-    }
-  }, [reminderSettings, isSubscribed]);
+    const fetchSubscription = async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.get(`/api/reminders?walletAddress=${account}&circleId=${circleId}`);
+        if (response.data && response.data.isSubscribed) {
+          setIsSubscribed(true);
+          setReminderSettings(response.data.settings);
+        } else {
+          setIsSubscribed(false);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subscription status:', error);
+        // Don't show an error toast on initial load failure
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSubscription();
+  }, [account, circleId]);
+
 
   const handleSubscription = async () => {
+    // Optional: Add simple email validation
+    if (!email || !email.includes('@')) {
+        toast.error('Please enter a valid email address.');
+        return;
+    }
+    
     try {
       setIsSaving(true);
-      
-      // Save subscription to backend
       const response = await axios.post('/api/reminders', {
         circleId,
         isSubscribed: true,
-        settings: reminderSettings,
-        walletAddress: account // Use the connected wallet address
+        // Pass the email inside the settings object
+        settings: { ...reminderSettings, email: email }, 
+        walletAddress: account
       });
       
       if (response.data.success) {
@@ -66,16 +76,13 @@ const ReminderSubscription = ({ circleId }) => {
   const handleUnsubscribe = async () => {
     try {
       setIsSaving(true);
-      
-      // Remove subscription from backend
       await axios.post('/api/reminders', {
         circleId,
         isSubscribed: false,
-        walletAddress: account // Use the connected wallet address
+        walletAddress: account
       });
       
       setIsSubscribed(false);
-      localStorage.removeItem('isSubscribed');
       toast.success('Reminders disabled');
     } catch (error) {
       console.error('Unsubscribe failed:', error);
@@ -95,13 +102,11 @@ const ReminderSubscription = ({ circleId }) => {
   const handleUpdateSettings = async () => {
     try {
       setIsSaving(true);
-      
-      // Update settings in backend
       await axios.post('/api/reminders', {
         circleId,
         isSubscribed: true,
         settings: reminderSettings,
-        walletAddress: account // Use the connected wallet address
+        walletAddress: account
       });
       
       toast.success('Settings updated!');
@@ -113,21 +118,47 @@ const ReminderSubscription = ({ circleId }) => {
     }
   };
 
+  if (isLoading) {
+      return (
+          <div className="bg-orange-50 rounded-lg p-4 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+      );
+  }
+
   return (
-    <div className="card-gradient mt-8">
+    <div className="bg-orange-50 rounded-lg p-6 mt-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div className="mb-4 md:mb-0">
-          <h4 className="font-bold text-lg">Contribution Reminders</h4>
+          <h4 className="font-bold text-lg text-gray-800">Contribution Reminders</h4>
           <p className="text-gray-600 max-w-md">
-            Get notified about important circle events and never miss a contribution deadline
+            Get notified about important circle events and never miss a contribution deadline.
           </p>
+
+          {!isSubscribed && (
+              <div className="mt-4">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                      Email Address
+                  </label>
+                  <input
+                      type="email"
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="mt-1 block w-full md:w-80 px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                      required
+                  />
+              </div>
+          )}
         </div>
         
         {!isSubscribed ? (
           <button
             onClick={handleSubscription}
             disabled={isSaving || !account}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg flex items-center disabled:opacity-75"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg flex items-center disabled:opacity-75 font-semibold transition-colors"
           >
             {isSaving ? (
               <>
@@ -148,7 +179,7 @@ const ReminderSubscription = ({ circleId }) => {
           </button>
         ) : (
           <div className="flex items-center space-x-3">
-            <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center">
+            <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center font-medium">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
@@ -157,7 +188,7 @@ const ReminderSubscription = ({ circleId }) => {
             <button
               onClick={handleUnsubscribe}
               disabled={isSaving}
-              className="text-red-600 hover:text-red-800 text-sm disabled:opacity-75"
+              className="text-red-600 hover:text-red-800 text-sm disabled:opacity-75 font-semibold"
             >
               Disable
             </button>
@@ -168,17 +199,18 @@ const ReminderSubscription = ({ circleId }) => {
       {isSubscribed && (
         <div className="mt-4 pt-4 border-t border-orange-200">
           <div className="flex justify-between items-center mb-3">
-            <h5 className="font-medium">Notification Settings</h5>
+            <h5 className="font-medium text-gray-700">Notification Settings</h5>
             <button
               onClick={handleUpdateSettings}
               disabled={isSaving}
-              className="text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded disabled:opacity-75"
+              className="text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded disabled:opacity-75 font-semibold"
             >
               {isSaving ? 'Saving...' : 'Save Settings'}
             </button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Contribution Toggle */}
             <div className="flex items-center">
               <label className="flex items-center cursor-pointer">
                 <div className="relative inline-block w-12 h-6">
@@ -199,6 +231,7 @@ const ReminderSubscription = ({ circleId }) => {
               </label>
             </div>
             
+            {/* Proposal Toggle */}
             <div className="flex items-center">
               <label className="flex items-center cursor-pointer">
                 <div className="relative inline-block w-12 h-6">
@@ -219,6 +252,7 @@ const ReminderSubscription = ({ circleId }) => {
               </label>
             </div>
             
+            {/* Streak Toggle */}
             <div className="flex items-center">
               <label className="flex items-center cursor-pointer">
                 <div className="relative inline-block w-12 h-6">
@@ -239,6 +273,7 @@ const ReminderSubscription = ({ circleId }) => {
               </label>
             </div>
             
+            {/* Frequency Dropdown */}
             <div className="flex items-center">
               <label className="flex items-center">
                 <span className="text-gray-700 mr-3">Frequency:</span>
@@ -248,7 +283,7 @@ const ReminderSubscription = ({ circleId }) => {
                     ...prev,
                     frequency: e.target.value
                   }))}
-                  className="border rounded px-3 py-1"
+                  className="border border-gray-300 rounded px-3 py-1 bg-white"
                   disabled={isSaving}
                 >
                   <option value="daily">Daily Digest</option>

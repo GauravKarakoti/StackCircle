@@ -1,10 +1,11 @@
 import PropTypes from 'prop-types';
 import '../globals.css';
 
+// 1. Accept the 'circleId' prop along with 'badges'
 const BadgeDisplay = ({ badges }) => {
   const badgeData = [
     { id: 1, name: "7-Day Streak", icon: "🔥", description: "Maintained a contribution streak for 7 consecutive periods" },
-    { id: 2, name: "Top Contributor", icon: "⭐", description: "Contributed more than any other member in the circle" },
+    { id: 2, name: "Milestone Contributor", icon: "⭐", description: "Contributed a total of 0.0005 BTC or more to the circle" },
     { id: 3, name: "Circle Governor", icon: "🏛️", description: "Successfully created and passed a governance proposal" }
   ];
 
@@ -16,6 +17,7 @@ const BadgeDisplay = ({ badges }) => {
           <div 
             key={badge.id} 
             className={`rounded-2xl p-5 flex flex-col items-center text-center transition-all duration-300 ${
+              // 2. The logic now correctly applies to the 'badges' array passed as a prop
               badges.includes(badge.id) 
                 ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 shadow-lg' 
                 : 'bg-gray-50 border-2 border-gray-200 opacity-80'
@@ -48,8 +50,9 @@ const BadgeDisplay = ({ badges }) => {
   );
 };
 
+// 3. Update PropTypes to require the new prop
 BadgeDisplay.propTypes = {
-  badges: PropTypes.arrayOf(PropTypes.number).isRequired
+  badges: PropTypes.arrayOf(PropTypes.number).isRequired,
 };
 
 export default BadgeDisplay;

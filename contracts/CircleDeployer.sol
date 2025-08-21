@@ -7,20 +7,22 @@ import "./ContributionEngine.sol";
 import "./CircleGovernance.sol";
 import "./StreakTracker.sol";
 
-// MODIFIED: Inherit from Ownable to secure the contract
 contract CircleDeployer is Ownable {
     address public immutable factoryAddress;
     address public immutable btcOracleAddress;
     address public immutable treasuryAddress;
+    address public immutable badgeSystemAddress; // <-- FIX: Added badge system address
 
     constructor(
         address _factoryAddress,
         address _btcOracleAddress,
-        address _treasuryAddress
-    ) Ownable(msg.sender) { // MODIFIED: Set the deployer as the owner
+        address _treasuryAddress,
+        address _badgeSystemAddress // <-- FIX: Added to constructor
+    ) Ownable(msg.sender) {
         factoryAddress = _factoryAddress;
         btcOracleAddress = _btcOracleAddress;
         treasuryAddress = _treasuryAddress;
+        badgeSystemAddress = _badgeSystemAddress; // <-- FIX: Store address
     }
 
     function deployAndRegisterCircle(
@@ -41,7 +43,9 @@ contract CircleDeployer is Ownable {
             treasuryAddress
         );
 
-        CircleGovernance governance = new CircleGovernance(circleOwner, factoryAddress);
+        // FIX: Deploy governance contract with this deployer as the temporary owner
+        // to allow for initialization calls.
+        CircleGovernance governance = new CircleGovernance(address(this), factoryAddress);
         StreakTracker tracker = new StreakTracker();
 
         // 2. Register the circle with the factory
@@ -60,15 +64,22 @@ contract CircleDeployer is Ownable {
         engine.setCircleId(circleId);
         engine.addInitialCreator(circleOwner);
         engine.setStreakTracker(address(tracker));
+        engine.setBadgeSystem(badgeSystemAddress); // Set the badge system dependency
         
         // --- StreakTracker Setup ---
         tracker.setCircleId(circleId);
         tracker.setEngine(address(engine));
+
+        // --- Governance Setup ---
+        // FIX: Call the correct `setDependencies` function.
+        governance.setDependencies(circleId, badgeSystemAddress);
         
-        // 4. Transfer ownership of components for future management
+        // 4. Transfer ownership of components
         engine.transferOwnership(factoryAddress);
         tracker.transferOwnership(factoryAddress);
         
-        governance.initialize(circleOwner, factoryAddress);
+        // FIX: Transfer governance ownership to the final intended owner.
+        governance.transferOwnership(circleOwner);
+        governance.acceptOwnership();
     }
 }

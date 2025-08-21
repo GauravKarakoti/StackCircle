@@ -8,24 +8,24 @@ import * as d3 from 'd3';
 import '../globals.css';
 import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
-import CircleCard from './CircleCard'; 
+import CircleCard from './CircleCard';
 
 const Dashboard = () => {
   const [circles, setCircles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { account, contract, provider, fetchProposals, contributeToCircle, inviteMember } = useCitrea();
+  const { account, contract, provider, fetchProposals, contributeToCircle, addMember } = useCitrea();
   const [activeCircle, setActiveCircle] = useState(null);
-  const [badges, setBadges] = useState([1, 3]);
+  const [badges, setBadges] = useState([]);
   const [isContributing, setIsContributing] = useState(false);
-  const [showInviteForm, setShowInviteForm] = useState(false);
   const [memberAddress, setMemberAddress] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
+  const BADGE_SYSTEM_ADDRESS = "0x9c7Dc71187A5005619c58E63C267e1B6D2B7C5d4";
+
   useEffect(() => {
     if (!account || !contract) return;
     
-    // Fetch user's circles from contract
     const fetchCircles = async () => {
       setLoading(true);
       try {
@@ -50,13 +50,13 @@ const Dashboard = () => {
             'getCirclesForMember',
             rawReturn
           );
-          const bigNumberArray = Array.isArray(resultProxy[0])
+          const circleIds = Array.isArray(resultProxy[0])
             ? resultProxy[0]
             : [ resultProxy[0] ];
-          console.log('Decoded circle IDs:', bigNumberArray);
+          console.log('Decoded circle IDs:', circleIds);
           
           const onchainCircles = await Promise.all(
-            bigNumberArray.map(async (id) => {
+            circleIds.map(async (id) => {
               const circleCalldata = contract.interface.encodeFunctionData(
                 'getCircle',
                 [ id ]
@@ -73,6 +73,33 @@ const Dashboard = () => {
               const tuple = contract.interface.decodeFunctionResult(fn, rawCircle);
               const circleData = tuple[0];
               console.log(`Circle ${id} data:`, circleData);
+              
+              // 1. Kick off the “transaction” and grab the encoded calldata
+              const membersTxResponse = await contract.getCircleMembers(id);
+              console.log('Raw members tx response:', membersTxResponse);
+
+              // txResponse.data is the ABI‑encoded call payload for getCircleMembers(uint256)
+              const membersCallData = membersTxResponse.data;
+              console.log('Members call data:', membersCallData);
+
+              // 2. Do a low‑level eth_call using that exact calldata
+              const rawMembersReturn = await provider.call({
+                  to: contract.target,
+                  data: membersCallData,
+              });
+
+              // 3. Decode the returned bytes with the same ABI
+              //    decodeFunctionResult returns an array matching the function’s outputs
+              // FIXED: Used 'getCircleMembers' instead of 'getCirclesForMember' to correctly decode the member addresses.
+              const membersResultProxy = contract.interface.decodeFunctionResult(
+                'getCircleMembers', 
+                rawMembersReturn
+              );
+              const memberAddresses = Array.isArray(membersResultProxy[0])
+                ? membersResultProxy[0]
+                : [ membersResultProxy[0] ];
+              console.log('Decoded member addresses:', memberAddresses);
+
               const engineAddress = circleData[0];
               const engineContract = new ethers.Contract(
                 engineAddress,
@@ -82,7 +109,6 @@ const Dashboard = () => {
               const contributionAmountWei = await engineContract.contributionAmount();
               const contributionAmount = Number(ethers.formatEther(contributionAmountWei));
               const governance = circleData[2];
-              console.log(`Circle ${id} governance address:`, governance);
               const governanceContract = new ethers.Contract(
                 governance,
                 ["function proposalCount() view returns (uint256)"],
@@ -98,9 +124,10 @@ const Dashboard = () => {
                 id,
                 name: circleData[3],
                 goal: Number(ethers.formatEther(circleData[4])), 
-                saved: Number(circleData[8])/1000000000000000000,                
-                members: circleData[6],            
-                streak: circleData[7],               
+                saved: Number(ethers.formatEther(circleData[8])),
+                memberCount: circleData[6],
+                memberAddresses: memberAddresses,
+                streak: circleData[7],
                 governance,
                 engineAddress, 
                 contributionAmount,
@@ -115,44 +142,42 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error("Failed to fetch circles:", error);
-        // Fallback to mock data if contract call fails
-        setCircles([
-          {
-            id: 1,
-            name: 'Family Savings',
-            goal: 0.5,
-            saved: 0.15,
-            members: 4,
-            streak: 3,
-            proposals: [
-              {
-                id: 1,
-                title: "Donate 10% to Charity",
-                description: "Proposal to donate 10% of funds to Bitcoin developers",
-                type: "DONATION",
-                votesFor: 15,
-                votesAgainst: 2,
-                deadline: Date.now() + 86400000
-              }
-            ]
-          },
-          {
-            id: 2,
-            name: 'Turkey Relief Fund',
-            goal: 1.0,
-            saved: 0.32,
-            members: 12,
-            streak: 5,
-            proposals: []
-          }
-        ]);
+        setCircles([]); // Set to empty on error to avoid showing stale or mock data
       } finally {
         setLoading(false);
       }
     };
     
     fetchCircles();
-  }, [account, contract, fetchProposals]);
+  }, [account, contract, provider, fetchProposals]);
+
+  useEffect(() => {
+    if (!account || !provider || !activeCircle) return;
+    const fetchBadges = async () => {
+      try {
+        const badgeContract = new ethers.Contract(
+          BADGE_SYSTEM_ADDRESS,
+          ['function hasBadge(address, uint256, uint256) view returns (bool)'],
+          provider
+        );
+        
+        const badgeIds = [1, 2, 3];
+        const userBadges = await Promise.all(
+          badgeIds.map(id => 
+            badgeContract.hasBadge(account, activeCircle.id, id)
+          )
+        );
+        
+        setBadges(
+          badgeIds.filter((_, i) => userBadges[i])
+        );
+      } catch (error) {
+        console.error("Error fetching badges:", error);
+      }
+    };
+    
+    fetchBadges();
+  }, [activeCircle, account, provider]);
   
   // Render progress chart
   useEffect(() => {
@@ -173,7 +198,6 @@ const Dashboard = () => {
         .domain([0, 1])
         .range([height - margin.bottom, margin.top]);
       
-      // Draw bars
       svg.selectAll('rect')
         .data(circles)
         .enter()
@@ -190,7 +214,6 @@ const Dashboard = () => {
         })
         .attr('fill', '#F97316');
       
-      // Add labels
       svg.selectAll('text')
         .data(circles)
         .enter()
@@ -272,7 +295,7 @@ const Dashboard = () => {
           onClick={() => setActiveTab('members')}
           className="flex-1 bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold py-3 rounded"
         >
-          Invite Members
+          Manage Members
         </button>
       </div>
     </div>
@@ -281,16 +304,19 @@ const Dashboard = () => {
   const MembersTab = () => (
     <div className="space-y-6">
       <div className="bg-orange-50 rounded-lg p-4">
-        <h4 className="font-bold mb-4">Circle Members</h4>
+        <h4 className="font-bold mb-4">Circle Members ({activeCircle.memberAddresses.length})</h4>
         <div className="space-y-3">
-          {[...Array(Number(activeCircle.members))].map((_, i) => (
+          {activeCircle.memberAddresses.map((address, i) => (
             <div key={i} className="flex items-center p-3 bg-white rounded-lg shadow-sm">
               <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
                 <span className="text-orange-500 font-bold">{i + 1}</span>
               </div>
               <div>
-                <p className="font-medium">Member {i + 1}</p>
-                <p className="text-sm text-gray-500">Active participant</p>
+                <p className="font-medium text-sm break-all">{address}</p>
+                {/* Add a check to ensure address is a string before calling toLowerCase */}
+                {typeof address === 'string' && address.toLowerCase() === account.toLowerCase() && (
+                  <span className="text-xs text-green-600 font-semibold">(You)</span>
+                )}
               </div>
             </div>
           ))}
@@ -298,7 +324,7 @@ const Dashboard = () => {
       </div>
 
       <div className="bg-orange-50 rounded-lg p-4">
-        <h4 className="font-bold mb-2">Invite New Member</h4>
+        <h4 className="font-bold mb-2">Add New Member</h4>
         <div className="flex space-x-2">
           <input
             type="text"
@@ -308,7 +334,7 @@ const Dashboard = () => {
             className="flex-1 border border-orange-300 rounded px-3 py-2"
           />
           <button
-            onClick={handleInviteMember}
+            onClick={handleAddMember}
             disabled={isInviting}
             className={`${
               isInviting 
@@ -316,7 +342,7 @@ const Dashboard = () => {
                 : 'bg-orange-500 hover:bg-orange-600'
             } text-white font-bold py-2 px-4 rounded`}
           >
-            {isInviting ? 'Sending...' : 'Send Invite'}
+            {isInviting ? 'Adding...' : 'Add Member'}
           </button>
         </div>
       </div>
@@ -344,7 +370,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleInviteMember = async () => {
+  const handleAddMember = async () => {
     if (!memberAddress || !ethers.isAddress(memberAddress)) {
       toast.error('Please enter a valid Ethereum address');
       return;
@@ -352,14 +378,24 @@ const Dashboard = () => {
 
     setIsInviting(true);
     try {
-      await inviteMember(Number(activeCircle.id), memberAddress);
-      toast.success(`Successfully invited ${memberAddress}!`);
+      await addMember(Number(activeCircle.id), memberAddress);
+      toast.success(`Successfully added ${memberAddress}!`);
       
-      // Reset form
+      const newMember = memberAddress;
+      setActiveCircle(prev => ({
+        ...prev,
+        memberCount: Number(prev.memberCount) + 1,
+        memberAddresses: [...prev.memberAddresses, newMember]
+      }));
+      setCircles(prevCircles => prevCircles.map(c => 
+        c.id === activeCircle.id 
+          ? { ...c, memberCount: Number(c.memberCount) + 1, memberAddresses: [...c.memberAddresses, newMember] } 
+          : c
+      ));
+      
       setMemberAddress('');
-      setShowInviteForm(false);
     } catch (error) {
-      toast.error(`Failed to invite member: ${error.message}`);
+      toast.error(`Failed to add member: ${error.message}`);
     } finally {
       setIsInviting(false);
     }
@@ -375,7 +411,6 @@ const Dashboard = () => {
         activeCircle.contributionAmount
       );
       
-      // Show transaction status
       toast.promise(
         provider.waitForTransaction(txHash),
         {
@@ -385,11 +420,9 @@ const Dashboard = () => {
         }
       );
       
-      // Update UI optimistically
       const newSaved = activeCircle.saved + activeCircle.contributionAmount;
       setActiveCircle(prev => ({...prev, saved: newSaved}));
       
-      // Update circles list
       setTimeout(() => {
         setCircles(prev => prev.map(circle => 
           circle.id === activeCircle.id ? 
@@ -423,7 +456,7 @@ const Dashboard = () => {
   }
   
   return (
-    <div className="max-w-6xl mx-auto">      
+    <div className="max-w-6xl mx-auto">       
       {circles.length === 0 ? (
         <div className="text-center py-12 card-gradient">
           <h3 className="text-xl font-semibold text-orange-800">No Circles Found</h3>

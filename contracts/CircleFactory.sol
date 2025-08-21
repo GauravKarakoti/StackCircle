@@ -24,7 +24,7 @@ contract CircleFactory is ERC721, Ownable {
         string  name;
         uint256 goal;
         uint256 created;
-        uint256 memberCount;   // Track number of members
+        uint256 memberCount;  // Track number of members
         uint256 longestStreak;
         uint256 totalContributed;
     }
@@ -49,8 +49,6 @@ contract CircleFactory is ERC721, Ownable {
     event MemberAdded(uint256 indexed circleId, address indexed member);
     event ProposalCreated(uint256 indexed circleId, uint256 proposalId);
 
-    // The constructor now accepts its dependencies instead of creating them.
-    // It takes the BTC oracle, the pre-deployed BadgeSystem, and the initial owner.
     constructor(
         address _btcOracle,
         address _badgeSystem,
@@ -60,8 +58,6 @@ contract CircleFactory is ERC721, Ownable {
         badgeSystem = _badgeSystem;
     }
 
-    // This function allows the owner (deployer) to register a new circle
-    // by providing the addresses of its pre-deployed component contracts.
     function registerCircle(
         string memory name,
         uint256 goal,
@@ -86,7 +82,7 @@ contract CircleFactory is ERC721, Ownable {
             name: name,
             goal: goal,
             created: block.timestamp,
-            memberCount: 1,       // Creator is first member
+            memberCount: 1,      // Creator is first member
             longestStreak: 0,
             totalContributed: 0
         });
@@ -128,25 +124,12 @@ contract CircleFactory is ERC721, Ownable {
         uint256 amount,
         address recipient
     ) external {
-        require(circleId > 0 && circleId <= circleCount, "Invalid circle ID");
-        
-        bool isMember = false;
-        address[] memory members = circleMembers[circleId];
-        for (uint i = 0; i < members.length; i++) {
-            if (members[i] == msg.sender) {
-                isMember = true;
-                break;
-            }
-        }
-        require(isMember, "Caller is not a circle member");
+        require(isCircleMember(circleId, msg.sender), "Caller is not a circle member");
         
         CircleGovernance governance = CircleGovernance(circles[circleId].governance);
         
-        // First, create the proposal. The function does not return a value.
         governance.createProposal(proposalType, title, description, amount, recipient);
         
-        // Then, get the ID of the newly created proposal.
-        // This assumes CircleGovernance has a public `proposalCount` state variable or getter.
         uint256 proposalId = governance.proposalCount();
         
         emit ProposalCreated(circleId, proposalId);
@@ -161,18 +144,8 @@ contract CircleFactory is ERC721, Ownable {
         return MerkleProof.verify(proof, merkleRoots[circleId], leaf);
     }
 
-    function inviteMember(uint256 circleId, address newMember) external {
-        require(circleId > 0 && circleId <= circleCount, "Invalid circle ID");
-        
-        bool isMember = false;
-        address[] memory members = circleMembers[circleId];
-        for (uint i = 0; i < members.length; i++) {
-            if (members[i] == msg.sender) {
-                isMember = true;
-                break;
-            }
-        }
-        require(isMember, "Caller not a member");
+    function addMember(uint256 circleId, address newMember) external {
+        require(isCircleMember(circleId, msg.sender), "Caller not a member");
         
         ContributionEngine engine = ContributionEngine(circles[circleId].engine);
         engine.addMember(newMember);
@@ -196,6 +169,18 @@ contract CircleFactory is ERC721, Ownable {
         emit MemberAdded(circleId, member);
     }
     
+    // --- FIX: Added the implementation for isCircleMember ---
+    function isCircleMember(uint256 circleId, address member) public view returns (bool) {
+        require(circleId > 0 && circleId <= circleCount, "Invalid circle ID");
+        address[] storage members = circleMembers[circleId];
+        for (uint i = 0; i < members.length; i++) {
+            if (members[i] == member) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function getCirclesForMember(address member) external view returns (uint256[] memory) {
         return memberCircles[member];
     }

@@ -6,11 +6,18 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./interfaces/IBtcTimeStamp.sol";
 import "./interfaces/ICircleFactory.sol";
 import "./interfaces/ILendingPool.sol";
+import "./interfaces/IBadgeSystem.sol";
+import "./CircleGovernance.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+// --- FIX: Define interfaces for external contracts ---
 interface IGovernanceToken {
     function mint(address to, uint256 amount) external;
+}
+
+interface IStreakTracker {
+    function recordContribution(address member) external returns (uint256 newStreak);
 }
 
 contract ContributionEngine is Ownable, ReentrancyGuard {
@@ -83,7 +90,7 @@ contract ContributionEngine is Ownable, ReentrancyGuard {
         treasury = _treasury;
     }
     
-    // Set circle ID (called by factory)
+    // --- Setup Functions ---
     function setCircleId(uint256 _circleId) external onlyOwner {
         require(circleId == 0, "Circle ID already set");
         circleId = _circleId;
@@ -119,18 +126,17 @@ contract ContributionEngine is Ownable, ReentrancyGuard {
         members[member] = Member(0, 0, true, 500); // Initial credit score 500
         memberList.push(member);
         
-        // Notify factory about new member
         ICircleFactory(factory).addMemberToCircle(circleId, member);
         emit MemberAdded(member);
     }
 
-    // Main contribution function with protocol fee
+    // --- Core Logic ---
     function contribute() external payable nonReentrant {
+        require(msg.value == contributionAmount, "Invalid contribution amount");
         _processContribution(msg.sender);
     }
     
-    // Layer 2 batch processing
-    function batchContribute(address[] calldata _members) external payable {
+    function batchContribute(address[] calldata _members) external payable nonReentrant {
         require(isBatchOperator[msg.sender], "Unauthorized operator");
         uint256 totalAmount = contributionAmount * _members.length;
         uint256 totalFee = batchProcessingFee * _members.length;
@@ -140,7 +146,6 @@ contract ContributionEngine is Ownable, ReentrancyGuard {
             _processContribution(_members[i]);
         }
         
-        // Refund any excess
         if (msg.value > totalAmount + totalFee) {
             payable(msg.sender).transfer(msg.value - totalAmount - totalFee);
         }
@@ -149,54 +154,50 @@ contract ContributionEngine is Ownable, ReentrancyGuard {
     }
     
     function _processContribution(address member) private {
-        require(members[member].exists, "Not member");
-        require(
-            block.timestamp > members[member].lastContribution + contributionPeriod/2,
-            "Contribution too soon"
-        );
+        require(members[member].exists, "Not a member");
         
-        // Verify Bitcoin timestamp proof
+        // FIX: Only apply the time lock if it's not the user's first contribution
+        if (members[member].lastContribution != 0) {
+            require(
+                block.timestamp > members[member].lastContribution + contributionPeriod / 2,
+                "Contribution too soon"
+            );
+        }
+        
         uint256 btcHeight = IBtcTimestamp(BTC_TIMESTAMP_ORACLE).verifyTimestamp(block.timestamp);
-        
-        // Calculate protocol fee
+    
         uint256 protocolFee = (contributionAmount * PROTOCOL_FEE_BPS) / 10000;
         uint256 netContribution = contributionAmount - protocolFee;
         
-        // Update member stats
         totalContributions += netContribution;
         members[member].lastContribution = block.timestamp;
         members[member].totalContributed += netContribution;
         
-        // Update credit score (simplified model)
-        members[member].creditScore = members[member].creditScore + 10 > 850 ? 
-            850 : members[member].creditScore + 10;
+        members[member].creditScore = members[member].creditScore + 10 > 850 
+            ? 850 
+            : members[member].creditScore + 10;
         
-        // Send fee to treasury
         if (protocolFee > 0) {
             (bool feeSuccess, ) = treasury.call{value: protocolFee}("");
             require(feeSuccess, "Fee transfer failed");
         }
         
-        // Notify streak tracker
+        uint256 newStreak = 0;
         if (streakTracker != address(0)) {
-            (bool streakSuccess, ) = streakTracker.call(
-                abi.encodeWithSignature("recordContribution(address)", member)
-            );
-            require(streakSuccess, "Streak update failed");
+            newStreak = IStreakTracker(streakTracker).recordContribution(member);
         }
         
-        // Mint badge if eligible
-        if (badgeSystem != address(0) && members[member].totalContributed >= 0.1 ether) {
-            (bool badgeSuccess, ) = badgeSystem.call(
-                abi.encodeWithSignature("mintBadge(uint256,address,uint256)", circleId, member, 2)
-            );
-            if (!badgeSuccess) {
-                revert("Badge minting failed");
+        if (badgeSystem != address(0)) {
+            if (members[member].totalContributed >= 0.0005 ether) {
+                IBadgeSystem(badgeSystem).mintBadge(circleId, member, 2);
+            }
+            if (newStreak >= 7) {
+                IBadgeSystem(badgeSystem).mintBadge(circleId, member, 1);
             }
         }
 
         if (address(governanceToken) != address(0)) {
-            uint256 tokenReward = contributionAmount * 10; // 10 tokens per 0.01 BTC
+            uint256 tokenReward = contributionAmount * 10;
             governanceToken.mint(member, tokenReward);
         }
 
@@ -211,7 +212,7 @@ contract ContributionEngine is Ownable, ReentrancyGuard {
         emit CreditScoreUpdated(member, members[member].creditScore);
     }
     
-    // Stateless client verification
+    // --- View and Utility Functions ---
     function verifyMembership(
         address member,
         bytes32[] calldata proof
@@ -220,7 +221,6 @@ contract ContributionEngine is Ownable, ReentrancyGuard {
         return MerkleProof.verify(proof, merkleRoot, leaf);
     }
     
-    // Lending integration
     function requestLoan(
         uint256 amount,
         uint256 duration,
@@ -229,10 +229,8 @@ contract ContributionEngine is Ownable, ReentrancyGuard {
         require(members[msg.sender].exists, "Not member");
         require(members[msg.sender].creditScore >= 600, "Insufficient credit");
         
-        ILendingPool pool = ILendingPool(poolAddress);
-        pool.requestLoan(circleId, msg.sender, amount, duration);
+        ILendingPool(poolAddress).requestLoan(circleId, msg.sender, amount, duration);
         
-        // Adjust credit score
         members[msg.sender].creditScore -= 50;
     }
     
@@ -245,10 +243,10 @@ contract ContributionEngine is Ownable, ReentrancyGuard {
     }
 
     function addInitialCreator(address creator) external onlyOwner {
-        require(memberList.length == 0, "Initial creator already set");
-        require(!members[creator].exists, "Already a member");
+        require(memberList.length == 0, "Initial creator can only be set once");
+        require(!members[creator].exists, "Creator is already a member");
         
-        members[creator] = Member(0, 0, true, 500); // Initial credit score 500
+        members[creator] = Member(0, 0, true, 500);
         memberList.push(creator);
         
         emit MemberAdded(creator);
