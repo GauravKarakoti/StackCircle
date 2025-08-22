@@ -16,11 +16,11 @@ const BadgeDisplay = ({ badges }) => {
         {badgeData.map(badge => (
           <div 
             key={badge.id} 
-            className={`rounded-2xl p-5 flex flex-col items-center text-center transition-all duration-300 ${
+            className={`rounded-2xl p-6 flex flex-col items-center text-center transition-all duration-300 transform ${
               // 2. The logic now correctly applies to the 'badges' array passed as a prop
               badges.includes(badge.id) 
-                ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 shadow-lg' 
-                : 'bg-gray-50 border-2 border-gray-200 opacity-80'
+                ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 shadow-lg hover:scale-105' 
+                : 'bg-gray-50 border-2 border-gray-200 opacity-80 grayscale'
             }`}
           >
             <div 

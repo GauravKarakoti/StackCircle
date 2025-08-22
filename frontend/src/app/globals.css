@@ -8,6 +8,25 @@ body {
   background-color: #fff7ed;
 }
 
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #ffedd5; /* Equivalent to bg-orange-100 */
+}
+
+/* Styles the draggable handle of the scrollbar */
+::-webkit-scrollbar-thumb {
+  background-color: #fb923c; /* Equivalent to bg-orange-400 */
+  border-radius: 9999px;    /* Equivalent to rounded-full */
+}
+
+/* Styles the handle when the mouse is hovering over it */
+::-webkit-scrollbar-thumb:hover {
+  background-color: #f97316; /* Equivalent to bg-orange-500 */
+}
+
 @layer components {
   .btn-primary {
     --tw-gradient-from: #f97316; /* from-orange-500 */
@@ -15,11 +34,11 @@ body {
     --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
     background-image: linear-gradient(to right, var(--tw-gradient-stops));
     color: #ffffff;
-    font-weight: 700;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    transition: background-color 200ms ease-in-out, color 200ms ease-in-out; /* transition duration-200 */
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    transition: all 0.3s ease-in-out, color 200ms ease-in-out; /* transition duration-200 */
     transition-property: all;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 300ms;
@@ -27,10 +46,9 @@ body {
   }
 
   .btn-primary:hover {
-    background-color: #EA580C;         /* hover:bg-orange-600 */
-    --tw-gradient-from: #ea580c; /* hover:from-orange-600 */
-    --tw-gradient-to: #d97706;   /* hover:to-amber-600 */
-    transform: scale(1.03);
+    background-image: linear-gradient(to right, #ea580c, #d97706);
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   }
   
   .btn-primary:active {
@@ -83,10 +101,15 @@ body {
     --tw-gradient-to: #fefce8;   /* to-yellow-50 */
     --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
     background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
-    border-radius: 0.75rem; /* rounded-xl */
+    border-radius: 1rem; /* rounded-xl */
     padding: 1.5rem; /* p-6 */
     border: 2px solid #fed7aa; /* border-2 border-orange-200 */
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    transition: box-shadow 0.3s ease-in-out;
+  }
+ 
+  .card-gradient:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   }
   
   .input-field {
@@ -94,7 +117,7 @@ body {
     padding: 0.75rem 1rem; /* px-4 py-3 */
     border: 1px solid #fed7aa; /* border-orange-200 */
     border-radius: 0.75rem; /* rounded-xl */
-    transition: box-shadow 200ms ease-in-out;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
@@ -102,12 +125,12 @@ body {
   }
 
   .input-field:focus {
-    outline: 2px solid transparent;
+    outline: none;
     outline-offset: 2px;
     --tw-ring-color: #fdb874; /* ring-orange-300 */
     --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
     --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #fdba74);
     border-color: #fdb874;
   }  
 
@@ -124,6 +147,11 @@ body {
   .badge-primary {
     background-color: #ffedd5; /* bg-orange-100 */
     color: #9a3412; /* text-orange-800 */
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem; /* 14px */
+    font-weight: 500;
   }
 
   .badge-success {
@@ -137,6 +165,10 @@ body {
     height: 8rem; /* h-32 */
     margin-left: auto;
     margin-right: auto;
+  }
+
+  .progress-ring circle {
+    transition: stroke-dashoffset 0.5s ease-in-out;
   }
 
   /* Tabs */
@@ -173,12 +205,22 @@ body {
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.7; }
 }
 
 @keyframes float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #ffedd5 25%, #fed7aa 50%, #ffedd5 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
 }
 
 @media (max-width: 768px) {

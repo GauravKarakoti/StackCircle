@@ -286,7 +286,11 @@ export const CitreaProvider = ({ children }) => {
           throw new Error(response.data.error || 'Failed to create circle.');
       }
     } catch (error) {
-      console.error('API call to create circle failed:', error);
+      if (error.response?.status === 402) {
+        toast.error('Insufficient funds for premium circle');
+      } else {
+        toast.error('Failed to create circle: ' + error.message);
+      }
       throw error;
     }
   }, [account]);

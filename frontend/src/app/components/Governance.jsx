@@ -76,7 +76,7 @@ const Governance = ({ circleId, governanceAddress, proposals, updateProposals })
       {proposals.length > 0 ? (
         <div className="space-y-4">
           {proposals.map(proposal => (
-            <div key={proposal.id} className="card overflow-hidden mb-6 hover:shadow-lg transition">
+            <div key={proposal.id} className="bg-white rounded-xl shadow-md border border-orange-100 card overflow-hidden mb-6 hover:shadow-lg transition">
               <div className={`p-4 ${
                 proposal.type === 'WITHDRAWAL' ? 'bg-blue-50' : 
                 proposal.type === 'DONATION' ? 'bg-purple-50' : 

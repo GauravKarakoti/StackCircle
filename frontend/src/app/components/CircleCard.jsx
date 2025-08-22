@@ -22,7 +22,7 @@ const CircleCard = ({ circle, onViewDetails }) => {
   }, [progressPercentage]);
 
   return (
-    <div className="card-gradient transition-transform hover:scale-[1.02] hover:shadow-lg flex flex-col justify-between p-6">
+    <div className="card-gradient transition-transform hover:scale-[1.02] hover:shadow-lg flex flex-col justify-between p-6 h-full">
       <div>
         <div className="flex justify-between items-start">
           <h3 className="text-xl font-bold mb-2 text-orange-700">{circle.name}</h3>
